@@ -36,7 +36,13 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PATCHED_DEVKIT = PROJECT_ROOT / "pandaset-devkit/python"
+
+# Keep the patched PandaSet devkit ahead of the repo root. Otherwise a local
+# data directory named "pandaset/" can shadow the importable devkit package.
+sys.path.insert(0, str(PROJECT_ROOT))
+sys.path.insert(0, str(PATCHED_DEVKIT))
 
 import open3d.ml.torch as ml3d
 from open3d._ml3d.torch.dataloaders import TorchDataloader, get_sampler
@@ -53,7 +59,6 @@ from thesis_pipeline.eval.milestone_c_metrics import (
     json_ready,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = PROJECT_ROOT / "configs/randlanet_pandaset_ff_lane3.yml"
 RUNS_DIR = PROJECT_ROOT / "logs/milestone_c/runs"
 
