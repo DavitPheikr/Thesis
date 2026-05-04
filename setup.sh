@@ -3,6 +3,7 @@ set -euo pipefail
 
 ENV_NAME="${ENV_NAME:-panda312}"
 PYTHON_VERSION="${PYTHON_VERSION:-3.12}"
+CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 RECREATE_ENV=0
 
 usage() {
@@ -14,6 +15,7 @@ Creates/uses a Conda env, installs the project GPU stack, and runs setup checks.
 Environment variables:
   ENV_NAME=${ENV_NAME}
   PYTHON_VERSION=${PYTHON_VERSION}
+  CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES}
 
 Options:
   --recreate  Remove and recreate the Conda env before installing.
@@ -61,6 +63,7 @@ step "System checks"
 echo "time_utc: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "repo_root: $(pwd)"
 echo "log_file: $LOG_FILE"
+echo "cuda_visible_devices: $CUDA_VISIBLE_DEVICES"
 
 require_file "requirements_working_panda.txt"
 require_file "tools/train_milestone_c.py"
@@ -97,6 +100,7 @@ fi
 
 conda activate "$ENV_NAME"
 export MPLCONFIGDIR="${MPLCONFIGDIR:-$(pwd)/$MPL_DIR}"
+export CUDA_VISIBLE_DEVICES
 
 python --version
 python -m pip --version
