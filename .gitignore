@@ -1,11 +1,11 @@
 # Dataset and local archives
-pandaset/
-pandaset.zip
+/pandaset/
+/pandaset.zip
 
 # Local Python environments
-panda/
-.venv/
-venv/
+/panda/
+/.venv/
+/venv/
 
 # Python compilation artifacts
 __pycache__/
@@ -28,7 +28,7 @@ pycache/
 Thumbs.db
 
 # Open3D-ML generated runtime artifacts
-train_log/
+/train_log/
 logs/cache/
 logs/RandLANet_PandaSetFFLane3_torch/checkpoint/
 logs/RandLANet_PandaSetFFLane3_torch/log_train_*.txt
@@ -42,5 +42,5 @@ logs/milestone_c/feature_cache/
 *.tmp
 
 # Scratch worktrees and generated point-cloud exports
-pandaset-devkit.worktrees/
+/pandaset-devkit.worktrees/
 *.pcd
