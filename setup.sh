@@ -101,6 +101,7 @@ fi
 conda activate "$ENV_NAME"
 export MPLCONFIGDIR="${MPLCONFIGDIR:-$(pwd)/$MPL_DIR}"
 export CUDA_VISIBLE_DEVICES
+export PYTHONPATH="$(pwd)/pandaset-devkit/python:$(pwd)/src:${PYTHONPATH:-}"
 
 python --version
 python -m pip --version
