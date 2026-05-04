@@ -306,3 +306,41 @@ Training dataset status:
 - The zip is not used directly by the pipeline and is fine to keep locally as a backup.
 
 No extraction is needed locally.
+
+## 10. Final Git Repair Result
+
+Final status after manual `.git` cleanup and Codex follow-up:
+
+- Git repository is initialized.
+- Current branch: `main`.
+- Initial commit was created.
+- A follow-up commit corrected `.gitignore` anchoring and ensured the patched PandaSet devkit Python package is tracked as normal files.
+
+Current Git log:
+
+```text
+4bf2c74 Track patched PandaSet devkit package files
+81eec91 Initial commit: Milestone C entry state with validation metric plumbing
+```
+
+Important verification:
+
+- No staged submodule/gitlink entries remain (`git ls-files --stage | awk '$1 == "160000" {print}'` returned no rows).
+- `pandaset-devkit/python/pandaset/utils.py` is tracked.
+- The patched `.pkl` / `.pkl.gz` fallback code remains present in `pandaset-devkit/python/pandaset/utils.py`.
+- Root dataset/env/archive paths remain ignored:
+  - `/pandaset/`
+  - `/pandaset.zip`
+  - `/panda/`
+
+Why a second commit was needed:
+
+- The first `git add` saw `pandaset-devkit/` as an embedded Git repository and staged it as a gitlink.
+- That would have been wrong for DigitalOcean/GitHub because the patched devkit source would not be included directly.
+- The nested `pandaset-devkit/.git` metadata was removed, the devkit package was staged as normal files, and `.gitignore` was corrected from `pandaset/` to `/pandaset/` so it ignores only the root dataset and not `pandaset-devkit/python/pandaset/`.
+
+Current user-action item:
+
+- Create a remote GitHub repository.
+- Add it as `origin`.
+- Push branch `main`.
