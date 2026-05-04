@@ -106,7 +106,7 @@ nvidia-nvtx-cu12==12.1.105
 open3d==0.19.0
 packaging==26.0
 pandas==3.0.2
-pandaset @ file:///home/pheikara/University/Y3S2/Thesis/Pipeline/pandaset-devkit/python
+-e ./pandaset-devkit/python
 pandocfilters==1.5.1
 parso==0.8.6
 pexpect==4.9.0
