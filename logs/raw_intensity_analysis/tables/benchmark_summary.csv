@@ -1,0 +1,3 @@
+task,roc_auc,pr_auc,best_threshold,best_f1,recall_at_precision_0p90,recall_at_precision_0p95,false_positive_rate_at_best_f1
+lane_vs_road,0.7052787703624999,0.7683163529786968,0.0,0.6666666666666666,0.3688,0.32107,1.0
+lane_vs_road_plus_other_markings,0.5847957585386904,0.3451077310234301,26.0,0.40605365895770784,0.000775,0.000525,0.7848045681549876

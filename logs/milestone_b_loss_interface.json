@@ -1,0 +1,11 @@
+{
+  "loss_class_name": "SemSegLoss",
+  "loss_source_path": "/home/pheikara/University/Y3S2/Thesis/Pipeline/panda/lib/python3.12/site-packages/open3d/_ml3d/torch/modules/losses/semseg_loss.py",
+  "weight_scope": "active-classes-only; dataset.cfg.class_weights is transformed internally by DataProcessing.get_class_weights before CrossEntropyLoss is constructed",
+  "weight_list_length": "num_classes=3 for this project; ignored label 0 is omitted after filter_valid_label reduces labels",
+  "weight_container_type": "list",
+  "weight_dtype": "float32",
+  "class_order": "[road, lane, other] after ignored label 0 is filtered out and labels are reduced to contiguous active-class indices",
+  "ignore_slot_policy": "omit",
+  "short_note": "SemSegLoss reads dataset.cfg.class_weights, converts that list with DataProcessing.get_class_weights, and then builds a float32 torch CrossEntropyLoss weight tensor for the active classes only."
+}

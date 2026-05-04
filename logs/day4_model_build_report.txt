@@ -1,0 +1,7 @@
+config_parse_ok True
+point_shape (62285, 3)
+feat_shape (62285, 1)
+label_shape (62285,)
+label_unique [0, 1, 2, 3]
+sample_contract_ok True
+randlanet_build_ok True

@@ -1,0 +1,112 @@
+Milestone B Day 3 Open3D-ML interface notes
+===========================================
+
+Key local-source findings
+-------------------------
+
+1. The important implementation files in this install live under `open3d/_ml3d/...`.
+   The public `open3d.ml.torch` package re-exports many of them through flat
+   modules like `open3d.ml.torch.datasets` and `open3d.ml.torch.pipelines`, but
+   `BaseDataset` itself is not re-exported on the public `open3d.ml.torch.datasets`
+   surface. For the custom dataset base class, the reliable import path is
+   `open3d._ml3d.datasets.base_dataset.BaseDataset`.
+
+2. `SemSegSpatiallyRegularSampler` is available locally. It is defined in
+   `open3d._ml3d.datasets.samplers.semseg_spatially_regular.py` and re-exported
+   through `open3d.ml.torch.datasets`.
+
+3. `SemSegLoss` does not consume final ready-made class weights directly.
+   Instead, `SemSegLoss.__init__` checks `dataset.cfg.class_weights`, passes that
+   list into `DataProcessing.get_class_weights(...)`, and only then converts the
+   result into a float32 torch tensor for `nn.CrossEntropyLoss`.
+
+4. The stock Open3D config files store large per-class counts in `class_weights`,
+   not already-normalized final weights. This strongly supports the reading above:
+   `dataset.cfg.class_weights` is expected to be count-like input to an internal
+   transform, not a finished loss-weight vector.
+
+5. For semantic segmentation, ignored labels are handled by
+   `filter_valid_label(...)`, which removes ignored labels first and then reduces
+   the remaining labels into the contiguous range expected by the logits. For this
+   project that means the weight tensor maps to active classes only, in
+   `[road, lane, other]` order after ignore `0` is removed.
+
+Dataset contract notes
+----------------------
+
+1. `BaseDataset` abstracts dataset-level methods:
+   - `get_label_to_names`
+   - `get_split`
+   - `is_tested`
+   - `save_test_result`
+
+2. The split object contract is implemented through `BaseDatasetSplit`.
+   It requires:
+   - `__len__`
+   - `get_data`
+   - `get_attr`
+
+3. `BaseDatasetSplit.__init__` calls `dataset.get_split_list(split)`, so a
+   practical custom dataset also needs `get_split_list(...)` even though that
+   method is not abstract on `BaseDataset`.
+
+4. The stock PandaSet split returns `{'point': ..., 'intensity': ..., 'label': ...}`.
+   That is not the exact key set RandLANet consumes. RandLANet's preprocess path
+   looks for `data['point']`, `data['feat']`, and `data['label']`. Therefore the
+   custom thesis dataset should adapt processed intensity into `feat`.
+
+Concatenation location
+----------------------
+
+`xyz + feat` concatenation does not happen in the dataset class or the pipeline.
+It happens in `RandLANet.transform(...)`:
+
+- if `feat is None`, `feat = pc.copy()`
+- else, `feat = np.concatenate([pc, feat], axis=1)`
+
+So the thesis dataset should return:
+- `point`: xyz only
+- `feat`: the one processed intensity channel
+- `label`: remapped labels
+
+and let RandLANet combine them into `in_channels=4` internally.
+
+Pipeline notes
+--------------
+
+1. The semantic segmentation training entrypoint is `SemanticSegmentation.run_train()`.
+
+2. The constructor only makes `model` truly positional, but `dataset` must be
+   provided for training and testing in practice.
+
+3. The training loop limits are controlled by:
+   - `cfg.max_epoch`
+   - `dataset.cfg.steps_per_epoch_train`
+   - `dataset.cfg.steps_per_epoch_valid`
+
+4. The pipeline expects the dataset to provide:
+   - `get_split('train')`
+   - `get_split('validation')`
+   - `get_split('test')`
+
+5. `RandLANet.get_optimizer(cfg_pipeline)` expects the pipeline config to include
+   an `optimizer` dictionary and `scheduler_gamma`.
+
+6. `SemanticSegmentation.run_train()` constructs `SemSegLoss`, then each model
+   step calls `model.get_loss(...)`. For RandLANet, the loss path is:
+   `filter_valid_label -> Loss.weighted_CrossEntropyLoss(scores, labels)`.
+
+Practical implication for later Milestone B work
+------------------------------------------------
+
+The custom thesis dataset should be implemented against the actual local contract,
+not the stock PandaSet keys:
+
+- inherit from `open3d._ml3d.datasets.base_dataset.BaseDataset`
+- return split objects compatible with `BaseDatasetSplit`
+- supply `point` / `feat` / `label`
+- keep statistics-driven intensity preprocessing in the thesis dataset path
+- let `RandLANet.transform` perform the final xyz+feat concatenation
+
+The loss-weight artifact logic for Milestone B must respect the local fact that
+`dataset.cfg.class_weights` is transformed again inside `SemSegLoss`.

@@ -1,0 +1,4 @@
+split,sequence_count,sequences_present_in_sequence_summary,sequences_missing_from_sequence_summary,missing_sequence_ids,available_lane_points_from_present_sequences,available_road_points_from_present_sequences,available_stop_line_points_raw9_from_present_sequences,available_other_marking_points_raw10_from_present_sequences,available_lane_bearing_sequences_from_present_sequences,lane_bearing_frame_fraction_from_frame_summary,verdict_usable_for_final_rules
+train,58,50,8,028 030 032 033 035 069 070 139,2098182,97744108,154787,2607345,50,1.0,False
+val,9,7,2,034 038,335257,11881237,2379,193204,7,1.0,False
+test,9,9,0,,457416,17416298,34933,233405,9,1.0,False

@@ -1,0 +1,139 @@
+milestone_b_stop_conditions
+===========================
+
+pipeline_sanity_check_passed: yes
+semseg_pool_discovered: yes
+split_frozen: yes
+intensity_statistics_measured: yes
+class_weights_measured: yes
+dataset_class_tested: yes
+config_updated_with_measured_values: yes
+
+no_full_training_has_occurred: yes
+no_performance_claim_has_been_made: yes
+real_training_allowed_in_config: false
+
+# Sanity run outcome (from logs/milestone_b_sanity_train_report.txt)
+sanity_run_script: tools/sanity_train_check.py
+sanity_run_report: logs/milestone_b_sanity_train_report.txt
+sanity_config_snapshot: logs/milestone_b_sanity_config_snapshot.yml
+sanity_run_started_at: 2026-04-15T15:35:20.468058
+sanity_weight_variant_used: open3d_native_from_measured_counts
+sanity_fallback_weight_variant_available: sqrt_inverse_frequency
+sanity_steps_total: 15
+sanity_min_steps_required: 5
+sanity_loss_first: 1.136897
+sanity_loss_last: 1.080209
+loss_ratio_final_to_initial: 0.9501
+sanity_loss_all_finite: yes
+sanity_loss_changed_first_to_last: yes
+sanity_loss_divergence_threshold: 10.0
+sanity_loss_divergence_observed: no
+sanity_result: PASS
+
+# num_points concession
+sanity_num_points_used: 4096
+num_points_baseline_intent: 16384
+num_points_concession_note: |
+  Four earlier Day 6 attempts at num_points=16384 (2026-04-15 05:48, 05:51,
+  05:54, and later re-attempts) never advanced past attempt_1_status STARTED
+  and produced zero-byte Open3D train logs, consistent with GPU / process
+  pressure at the baseline intent. The OOM-concession path documented in
+  the Milestone B guide (Section 9.8 and Day 6 step 6.3) was therefore
+  applied: num_points was reduced to 4096 for the Day 6 sanity run only.
+  Evidence of the failed 16384 attempts is preserved at:
+    - logs/milestone_b_sanity_train_report.fast_fail_attempt.txt
+    - logs/milestone_b_sanity_train_report.overlapped_invalid.txt
+    - logs/milestone_b_sanity_train_report.killed_before_clean_rerun.txt
+    - logs/milestone_b_sanity_train_report.stale_empty_before_fresh_run.txt
+    - logs/RandLANet_PandaSetFFLane3_torch/archived_day6_prererun_2026-04-15/
+  num_points MUST be restored to 16384 and revalidated at the start of
+  Milestone C before any full training run.
+
+# Lane fraction and oversampling triage (all from
+# logs/milestone_b_training_statistics.json class_counts)
+lane_fraction_measured: 0.0070369780
+expected_deep_anchor_count_sanity_num_points: 0.4504  # 4096 * p_lane / 64
+expected_deep_anchor_count_baseline_num_points: 1.8015  # 16384 * p_lane / 64
+oversampling_indicated: yes
+oversampling_note: |
+  Global heuristic E = num_points * p_lane / 64 falls below 2.0 at BOTH the
+  sanity run value (0.4504 at num_points=4096) AND the baseline intent
+  (1.8015 at num_points=16384). Lane-aware patch oversampling must be
+  implemented at the start of the next milestone, or explicitly rejected
+  with per-patch survival evidence. This is a heuristic, not a direct
+  per-patch lane-point survival measurement; a direct measurement after
+  grid subsampling is the preferred evidence for any rejection decision.
+
+# Grid subsampling
+post_grid_point_count: 53480
+post_grid_source_sequence: "001"
+post_grid_source_frame: 0
+grid_duplication_will_occur_at_baseline_intent: no  # 53480 > 16384
+grid_duplication_at_sanity_num_points: not_directly_measured  # 53480 > 4096 for verified sample; sanity run used the dataset class path, not this single sample
+
+# Interface discoveries
+concat_location_discovered: model_transform_step  # RandLANet.transform concatenates xyz and feat; dataset returns them separately
+weight_scope_discovered: active-classes-only  # dataset.cfg.class_weights is transformed via DataProcessing.get_class_weights before CrossEntropyLoss
+sampler_available: no  # registry_required=no; the pipeline uses the dataset instance directly and does not use a separate SemSegSpatiallyRegularSampler in the sanity run
+
+# Split and data-scan stats
+frame_skip_rate_statistics_scan: 0.000000
+sequences_in_training_split: 58
+sequences_in_val_split: 9
+sequences_in_test_split: 9
+semseg_pool_size: 76
+statistics_complete: True
+frames_processed_statistics_scan: 4640
+frames_failed_statistics_scan: 0
+frames_semseg_missing_statistics_scan: 0
+
+# Class counts (active classes)
+class_count_road: 119562394
+class_count_lane: 2098182
+class_count_other: 176504630
+class_count_ignore: 398730
+
+# Intensity statistics
+intensity_clip_low: 0.0
+intensity_clip_high: 114.0
+intensity_clip_mean: 22.481164932250977
+intensity_clip_std: 14.912428855895996
+
+# Provenance
+training_statistics_json: logs/milestone_b_training_statistics.json
+loss_interface_json: logs/milestone_b_loss_interface.json
+dataset_interface_json: logs/milestone_b_dataset_interface.json
+pipeline_interface_json: logs/milestone_b_pipeline_interface.json
+split_dir: configs/splits/
+sequence_manifest: logs/milestone_b_sequence_manifest.json
+preflight_report: logs/milestone_b_preflight.txt
+
+if_instability_recorded:
+  none  # attempt 1 passed on the recommended variant; fallback variant not exercised
+
+# Explicit carry-forward items for Milestone C
+carry_forward_to_milestone_c:
+  - Restore model.num_points to 16384 in configs/randlanet_pandaset_ff_lane3.yml and revalidate
+    the pipeline at that value before any full training invocation. If the baseline-intent
+    value again triggers OOM, investigate root cause (batch size, num_workers, num_neighbors,
+    sub_sampling_ratio, model dim) rather than permanently lowering num_points.
+  - Implement lane-aware patch oversampling, or directly measure per-patch lane-point
+    survival post grid-subsampling and explicitly reject with evidence. The global
+    heuristic E is below 2.0 at baseline intent.
+  - Fix the dual-writer race in tools/sanity_train_check.py (it writes to REPORT_FILE
+    via write_text while the shell redirect '>' also targets the same file, producing
+    duplicated/padded content). Either drop the stdout prints from the script or redirect
+    them to a separate log channel. Cosmetic, does not affect the PASS/FAIL semantics.
+  - Clean up the duplicate `num_workers: 0` keys in configs/randlanet_pandaset_ff_lane3.yml
+    (the YAML currently declares the key three times; YAML resolves to the last value).
+  - Decide whether to retain the ckpt_00000.pth / ckpt_00002.pth files produced by this
+    Day 6 sanity run under logs/RandLANet_PandaSetFFLane3_torch/checkpoint/, or archive
+    them. The local Open3D pipeline defaults is_resume=True, so any Milestone C training
+    invocation that does not explicitly force is_resume=False will silently auto-resume
+    from these sanity-run checkpoints.
+  - Finalize class-weight transform policy (both raw and sqrt-inverse-frequency variants
+    are already recorded in logs/milestone_b_training_statistics.json; only the
+    open3d_native_from_measured_counts list was exercised by the sanity run).
+
+ready_for_full_training_milestone: yes

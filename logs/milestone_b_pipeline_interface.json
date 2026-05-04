@@ -1,0 +1,25 @@
+{
+  "pipeline_class": "open3d.ml.torch.pipelines.SemanticSegmentation",
+  "constructor_required_args": [
+    "model",
+    "dataset (required for run_train/run_test even though the constructor default is None)"
+  ],
+  "training_method": "run_train",
+  "iteration_limit_mechanism": "max_epoch together with dataset.steps_per_epoch_train and dataset.steps_per_epoch_valid",
+  "required_config_fields": [
+    "name",
+    "batch_size",
+    "val_batch_size",
+    "test_batch_size",
+    "max_epoch",
+    "main_log_dir",
+    "device",
+    "split",
+    "train_sum_dir",
+    "save_ckpt_freq",
+    "scheduler_gamma",
+    "optimizer"
+  ],
+  "loss_invocation": "SemanticSegmentation.run_train constructs SemSegLoss(self, model, dataset, device). Each training step calls model.get_loss(Loss, results, inputs, device); RandLANet.get_loss then applies filter_valid_label and Loss.weighted_CrossEntropyLoss(scores, labels).",
+  "short_note": "Instantiate the dataset object first, then pass it together with the model into SemanticSegmentation. For sanity-limited training, keep dataset cfg steps_per_epoch_train small and max_epoch low. The pipeline internally asks the dataset for train and validation splits and starts training through run_train()."
+}

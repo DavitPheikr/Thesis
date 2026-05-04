@@ -1,0 +1,11 @@
+Do not start real training during Day 4.
+
+Work does not move into real training unless all of the following are true:
+- the environment is stable enough
+- PandaSet access is verified
+- raw IDs are verified
+- forward-only filtering is verified
+- semseg alignment is verified
+- the adapter is working
+- the config placeholder is working
+- the model-build or contract check passes

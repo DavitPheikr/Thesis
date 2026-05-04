@@ -1,0 +1,8 @@
+frame 0: n=62285 sensors=[1] sensor_ok=True alignment_ok=True
+frame 1: n=62273 sensors=[1] sensor_ok=True alignment_ok=True
+frame 2: n=62432 sensors=[1] sensor_ok=True alignment_ok=True
+frame 3: n=63383 sensors=[1] sensor_ok=True alignment_ok=True
+frame 4: n=61503 sensors=[1] sensor_ok=True alignment_ok=True
+
+preflight_multi_frame_ok True
+script_status PASS

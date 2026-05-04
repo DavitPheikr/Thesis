@@ -1,0 +1,101 @@
+{
+  "provenance": {
+    "split_file": "configs/splits/train.txt",
+    "sequences_in_split": 58,
+    "sequences_completed": 58,
+    "frames_processed": 4640,
+    "frames_semseg_missing": 0,
+    "frames_failed": 0,
+    "skip_rate": 0.0,
+    "intensity_samples_total": 5800000,
+    "per_sequence_sample_cap": 100000,
+    "class_weight_runtime_note": "Local Open3D SemSegLoss transforms dataset.cfg.class_weights internally; candidate direct-weight vectors are recorded separately in the class_weights section."
+  },
+  "intensity": {
+    "clip_low_p0p5": 0.0,
+    "clip_high_p99p5": 114.0,
+    "clip_mean": 22.481164932250977,
+    "clip_std": 14.912428855895996
+  },
+  "class_counts": {
+    "ignore": 398730,
+    "road": 119562394,
+    "lane": 2098182,
+    "other": 176504630
+  },
+  "class_weights": {
+    "deviation_note": "Approved Milestone B local-runtime deviation: candidate direct CE weight vectors are recorded for thesis analysis, but local Open3D SemSegLoss transforms dataset.cfg.class_weights internally via DataProcessing.get_class_weights.",
+    "candidate_weight_semantics": "direct final CrossEntropyLoss weights for analysis only; not consumed directly by the local Open3D runtime",
+    "raw_inverse_frequency": {
+      "by_class": {
+        "road": 1.476255401844831,
+        "lane": 84.12264998937177,
+        "other": 1.0
+      },
+      "as_list": [
+        1.476255401844831,
+        84.12264998937177,
+        1.0
+      ],
+      "lane_weight": 84.12264998937177
+    },
+    "sqrt_inverse_frequency": {
+      "by_class": {
+        "road": 1.215012510982842,
+        "lane": 9.171840054720304,
+        "other": 1.0
+      },
+      "as_list": [
+        1.215012510982842,
+        9.171840054720304,
+        1.0
+      ],
+      "lane_weight": 9.171840054720304
+    },
+    "candidate_recommended_variant": "sqrt_inverse_frequency",
+    "candidate_recommended_list": [
+      1.215012510982842,
+      9.171840054720304,
+      1.0
+    ],
+    "runtime_open3d_native_transform": {
+      "input_semantics": "per-class counts or count-like values passed into DataProcessing.get_class_weights",
+      "runtime_input_source": "measured active-class counts from class_counts",
+      "runtime_input_by_class": {
+        "road": 119562394.0,
+        "lane": 2098182.0,
+        "other": 176504630.0
+      },
+      "runtime_input_as_list": [
+        119562394.0,
+        2098182.0,
+        176504630.0
+      ],
+      "runtime_effective_ce_weights": [
+        2.3753318786621094,
+        36.98638153076172,
+        1.6340690851211548
+      ]
+    },
+    "weight_format_source": "logs/milestone_b_loss_interface.json",
+    "weight_scope_discovered": "active-classes-only; dataset.cfg.class_weights is transformed internally by DataProcessing.get_class_weights before CrossEntropyLoss is constructed",
+    "weight_list_length_discovered": "num_classes=3 for this project; ignored label 0 is omitted after filter_valid_label reduces labels",
+    "sanity_run_recommended_variant": "open3d_native_from_measured_counts",
+    "sanity_run_recommended_list": [
+      119562394.0,
+      2098182.0,
+      176504630.0
+    ],
+    "large_weight_warning": true
+  },
+  "grid_subsampling": {
+    "grid_size": 0.04,
+    "source_sequence_id": "001",
+    "source_frame_idx": 0,
+    "raw_point_count": 62285,
+    "post_grid_point_count": 53480,
+    "below_num_points_intent": false,
+    "duplication_will_occur": false,
+    "num_points_intent": 16384
+  }
+}

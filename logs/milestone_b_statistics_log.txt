@@ -1,0 +1,88 @@
+sensor_reapply_per_frame False
+training_sequences 58
+already_completed 0
+  processing 003... processed=80 failed=0 missing=0 err=None
+  processing 005... processed=80 failed=0 missing=0 err=None
+  processing 011... processed=80 failed=0 missing=0 err=None
+  processing 016... processed=80 failed=0 missing=0 err=None
+  processing 017... processed=80 failed=0 missing=0 err=None
+  processing 019... processed=80 failed=0 missing=0 err=None
+  processing 021... processed=80 failed=0 missing=0 err=None
+  processing 023... processed=80 failed=0 missing=0 err=None
+  processing 024... processed=80 failed=0 missing=0 err=None
+  processing 027... processed=80 failed=0 missing=0 err=None
+  processing 028... processed=80 failed=0 missing=0 err=None
+  processing 029... processed=80 failed=0 missing=0 err=None
+  processing 030... processed=80 failed=0 missing=0 err=None
+  processing 032... sensor_reapply_per_frame False
+training_sequences 58
+already_completed 13
+  processing 032... processed=80 failed=0 missing=0 err=None
+  processing 033... processed=80 failed=0 missing=0 err=None
+  processing 035... processed=80 failed=0 missing=0 err=None
+  processing 039... processed=80 failed=0 missing=0 err=None
+  processing 040... processed=80 failed=0 missing=0 err=None
+  processing 041... processed=80 failed=0 missing=0 err=None
+  processing 042... processed=80 failed=0 missing=0 err=None
+  processing 043... processed=80 failed=0 missing=0 err=None
+  processing 044... processed=80 failed=0 missing=0 err=None
+  processing 046... processed=80 failed=0 missing=0 err=None
+  processing 052... processed=80 failed=0 missing=0 err=None
+  processing 053... processed=80 failed=0 missing=0 err=None
+  processing 056... processed=80 failed=0 missing=0 err=None
+  processing 057... sensor_reapply_per_frame False
+training_sequences 58
+already_completed 26
+  processing 057... processed=80 failed=0 missing=0 err=None
+  processing 058... processed=80 failed=0 missing=0 err=None
+  processing 064... processed=80 failed=0 missing=0 err=None
+  processing 066... processed=80 failed=0 missing=0 err=None
+  processing 067... processed=80 failed=0 missing=0 err=None
+  processing 069... processed=80 failed=0 missing=0 err=None
+  processing 070... processed=80 failed=0 missing=0 err=None
+  processing 071... processed=80 failed=0 missing=0 err=None
+  processing 072... processed=80 failed=0 missing=0 err=None
+  processing 073... processed=80 failed=0 missing=0 err=None
+  processing 077... processed=80 failed=0 missing=0 err=None
+  processing 078... processed=80 failed=0 missing=0 err=None
+  processing 080... processed=80 failed=0 missing=0 err=None
+  processing 084... sensor_reapply_per_frame False
+training_sequences 58
+already_completed 39
+  processing 084... processed=80 failed=0 missing=0 err=None
+  processing 088... processed=80 failed=0 missing=0 err=None
+  processing 089... processed=80 failed=0 missing=0 err=None
+  processing 094... processed=80 failed=0 missing=0 err=None
+  processing 095... processed=80 failed=0 missing=0 err=None
+  processing 097... processed=80 failed=0 missing=0 err=None
+  processing 098... processed=80 failed=0 missing=0 err=None
+  processing 105... processed=80 failed=0 missing=0 err=None
+  processing 109... processed=80 failed=0 missing=0 err=None
+  processing 110... processed=80 failed=0 missing=0 err=None
+  processing 112... processed=80 failed=0 missing=0 err=None
+  processing 113... processed=80 failed=0 missing=0 err=None
+  processing 115... processed=80 failed=0 missing=0 err=None
+  processing 119... processed=80 failed=0 missing=0 err=None
+  processing 120... sensor_reapply_per_frame False
+training_sequences 58
+already_completed 53
+  processing 120... processed=80 failed=0 missing=0 err=None
+  processing 122... processed=80 failed=0 missing=0 err=None
+  processing 139... processed=80 failed=0 missing=0 err=None
+  processing 149... processed=80 failed=0 missing=0 err=None
+  processing 158... processed=80 failed=0 missing=0 err=None
+
+sequences_completed 58
+sequences_expected 58
+frames_processed 4640
+frames_semseg_missing 0
+frames_failed 0
+skip_rate 0.000000
+class_counts {0: 398730, 1: 119562394, 2: 2098182, 3: 176504630}
+intensity_clip_low 0.000000
+intensity_clip_high 114.000000
+intensity_clip_mean 22.481165
+intensity_clip_std 14.912429
+lane_points 2098182
+statistics_complete True
+script_status PASS

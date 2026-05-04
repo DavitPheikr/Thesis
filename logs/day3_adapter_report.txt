@@ -1,0 +1,9 @@
+chosen_seq 001
+chosen_frame 0
+forward_sensor 1
+intensity_column i
+point_shape (62285, 3)
+feat_shape (62285, 1)
+label_shape (62285,)
+label_unique [0, 1, 2, 3]
+lane_fraction 0.0025688367985871397

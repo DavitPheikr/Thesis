@@ -1,0 +1,23 @@
+{
+  "sequence_count": 66,
+  "frame_count": 4901,
+  "tables": [
+    "tables/benchmark_summary.csv",
+    "tables/distance_bucket_summary.csv",
+    "tables/frame_summary.csv",
+    "tables/global_intensity_summary.csv",
+    "tables/local_contrast_sequence_summary.csv",
+    "tables/local_contrast_summary.csv",
+    "tables/raw_id_summary.csv",
+    "tables/remapped_label_summary.csv",
+    "tables/sequence_summary.csv"
+  ],
+  "reports": [
+    "reports/analysis_overview.md",
+    "reports/stage1_global_raw_id_report.md",
+    "reports/stage2_sequence_frame_report.md",
+    "reports/stage3_local_contrast_report.md",
+    "reports/stage4_distance_report.md",
+    "reports/stage5_benchmark_report.md"
+  ]
+}

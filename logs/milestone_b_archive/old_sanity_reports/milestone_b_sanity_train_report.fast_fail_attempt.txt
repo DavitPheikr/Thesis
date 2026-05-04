@@ -1,0 +1,11 @@
+sanity_script_started_at 2026-04-15T05:51:12.638063
+primary_weight_variant open3d_native_from_measured_counts
+fa
+attempt_1_variant open3d_native_from_measured_counts
+max_epoch 2
+steps_per_epoch_train 5
+steps_per_epoch_valid 2
+num_points 16384
+real_training_allowed False
+attempt_1_status STARTED
+attempt_1_variant open3d_native_from_measured_counts

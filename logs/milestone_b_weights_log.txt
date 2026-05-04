@@ -1,0 +1,9 @@
+raw_lane_weight 84.122650
+sqrt_lane_weight 9.171840
+candidate_recommended_variant sqrt_inverse_frequency
+runtime_sanity_variant open3d_native_from_measured_counts
+runtime_sanity_list [119562394.0, 2098182.0, 176504630.0]
+runtime_effective_ce_weights [2.3753318786621094, 36.98638153076172, 1.6340690851211548]
+post_grid_point_count 53480
+duplication_will_occur False
+script_status PASS

@@ -1,0 +1,22 @@
+sensor_reapply_per_frame False
+total_sequence_dirs 103
+already_completed 0
+  auditing 001... semseg=True lane=True failed=0 missing=0 err=None
+  auditing 002... semseg=True lane=True failed=0 missing=0 err=None
+  auditing 003... semseg=True lane=True failed=0 missing=0 err=None
+  auditing 004... semseg=True lane=False failed=80 missing=0 err=None
+  auditing 005... semseg=True lane=True failed=0 missing=0 err=None
+  auditing 006... semseg=True lane=False failed=80 missing=0 err=None
+  auditing 008... semseg=True lane=False failed=80 missing=0 err=None
+  auditing 011... semseg=True lane=True failed=0 missing=0 err=None
+  auditing 012... semseg=True lane=False failed=80 missing=0 err=None
+  auditing 013... semseg=True lane=True failed=0 missing=0 err=None
+  auditing 014... semseg=True lane=False failed=80 missing=0 err=None
+  auditing 015... semseg=True lane=True failed=0 missing=0 err=None
+  auditing 016... semseg=True lane=True failed=0 missing=0 err=None
+  auditing 017... semseg=True lane=True failed=0 missing=0 err=None
+  auditing 018... semseg=True lane=False failed=80 missing=0 err=None
+  auditing 019... semseg=True lane=True failed=0 missing=0 err=None
+  auditing 020... semseg=True lane=False failed=80 missing=0 err=None
+  auditing 021... semseg=True lane=True failed=0 missing=0 err=None
+  auditing 023... 

@@ -1,0 +1,46 @@
+sequence_count 103
+sequence_head ['001', '002', '003', '004', '005', '006', '008', '011', '012', '013']
+chosen_seq 001
+chosen_frame 0
+all_points 169171
+all_columns ['x', 'y', 'z', 'i', 't', 'd']
+all_unique_sensor_ids [0, 1]
+front_points 62285
+front_unique_sensor_ids [1]
+forward_sensor_candidate 1
+forward_sensor_usable True
+chosen_seq 001
+chosen_frame 0
+frame_type <class 'pandas.DataFrame'>
+frame_rows 169171
+frame_columns ['x', 'y', 'z', 'i', 't', 'd']
+chosen_seq 001
+semseg_loaded True
+classes_type <class 'dict'>
+classes_sample [('1', 'Smoke'), ('2', 'Exhaust'), ('3', 'Spray or rain'), ('4', 'Reflection'), ('5', 'Vegetation'), ('6', 'Ground'), ('7', 'Road'), ('8', 'Lane Line Marking'), ('9', 'Stop Line Marking'), ('10', 'Other Road Marking'), ('11', 'Sidewalk'), ('12', 'Driveway')]
+classes_type <class 'dict'>
+id_1 Smoke
+id_2 Exhaust
+id_3 Spray or rain
+id_4 Reflection
+id_7 Road
+id_8 Lane Line Marking
+id_9 Stop Line Marking
+id_10 Other Road Marking
+chosen_seq 001
+chosen_frame 0
+all_points 169171
+all_columns ['x', 'y', 'z', 'i', 't', 'd']
+all_unique_sensor_ids [0, 1]
+front_sensor 1
+front_points 62285
+front_unique_sensor_ids [1]
+point_count 62285
+aligned_label_count 62285
+same_count True
+label_head [5, 5, 5, 5, 5]
+columns ['x', 'y', 'z', 'i', 't', 'd']
+intensity_column i
+intensity_head [14.0, 11.0, 12.0, 16.0, 14.0]
+intensity_min 0.0
+intensity_max 255.0

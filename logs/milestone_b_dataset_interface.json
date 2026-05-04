@@ -1,0 +1,37 @@
+{
+  "base_class": "open3d._ml3d.datasets.base_dataset.BaseDataset",
+  "required_methods": [
+    "get_label_to_names",
+    "get_split",
+    "get_split_list",
+    "is_tested",
+    "save_test_result",
+    "split.__len__",
+    "split.get_data",
+    "split.get_attr"
+  ],
+  "get_data_return_keys": {
+    "points_key": "point",
+    "features_key": "feat",
+    "labels_key": "label"
+  },
+  "concat_location": "model transform step; RandLANet.transform concatenates xyz and feat, so the dataset should return point and feat separately",
+  "split_object_api": "The pipeline calls dataset.get_split('train'), dataset.get_split('validation'), and dataset.get_split('test'); get_split must return a BaseDatasetSplit-style object with __len__, get_data, get_attr, and sampler support.",
+  "required_cfg_fields": [
+    "dataset_path",
+    "name",
+    "training_split",
+    "validation_split",
+    "test_split",
+    "all_split",
+    "class_weights",
+    "ignored_label_inds",
+    "use_cache",
+    "cache_dir",
+    "test_result_folder",
+    "sampler"
+  ],
+  "registry_required": "no",
+  "registry_note": "The pipeline uses the dataset instance directly. DATASET._register_module(...) is optional unless a separate factory-style config loader needs name-based lookup.",
+  "short_note": "Implement a BaseDataset subclass plus a split subclass. The split object is what actually provides per-sample data. For RandLANet, the custom split should return point/feat/label even though the stock Pandaset split returns point/intensity/label; leave xyz+feat concatenation to RandLANet.transform."
+}

@@ -1,0 +1,26 @@
+project_root /home/pheikara/University/Y3S2/Thesis/Pipeline
+python_executable /home/pheikara/University/Y3S2/Thesis/Pipeline/panda/bin/python
+python_version 3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]
+platform Linux-6.17.0-20-generic-x86_64-with-glibc2.39
+machine x86_64
+system Linux
+python 3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]
+torch 2.2.2+cu121
+open3d 0.19.0
+numpy 1.26.4
+pandas 3.0.2
+cuda_available True
+ml_torch_ok True
+python 3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]
+torch 2.2.2+cu121
+cuda_available True
+open3d 0.19.0
+ml_torch_ok True
+randlanet_ok True
+pandaset_ok True
+ego_helper_exists True
+pandaset_module_path /home/pheikara/University/Y3S2/Thesis/Pipeline/panda/lib/python3.12/site-packages/pandaset/__init__.py
+pandaset_module_path /home/pheikara/University/Y3S2/Thesis/Pipeline/panda/lib/python3.12/site-packages/pandaset/__init__.py
+contains_project_root True
+local_patched_source_exists True
+preserve_patch_reinstall_command pip install --no-deps ./pandaset-devkit/python

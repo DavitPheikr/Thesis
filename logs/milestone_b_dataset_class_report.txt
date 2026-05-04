@@ -1,0 +1,15 @@
+yaml_json_weights_consistent True
+intensity_clip_low_consistent True
+intensity_clip_high_consistent True
+intensity_mean_consistent True
+intensity_std_consistent True
+yaml_json_intensity_consistent True
+backward_compat_lane_fraction 0.002568837
+backward_compat_ok True
+split_train_ok True
+split_train_length 4640
+split_val_ok True
+split_val_length 720
+split_test_ok True
+split_test_length 720
+script_status PASS
