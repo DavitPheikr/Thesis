@@ -1,0 +1,10 @@
+{
+  "config": "logs/milestone_c/configs/c0_server_medium_bs2_500_200.yml",
+  "run_name": "C0_baseline_medium_10ep_random_bs2",
+  "epochs": 10,
+  "no_resume": true,
+  "seed": 42,
+  "steps_per_epoch_train": null,
+  "steps_per_epoch_valid": null,
+  "force": false
+}
