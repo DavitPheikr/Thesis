@@ -1,5 +1,38 @@
 # PROGRESS_LOG
 
+## Milestone C Server And Sampler Update - 2026-05-05
+
+**What this update did**: recorded the current Milestone C server state and resolved the C0 sampler decision after GPU smoke tests and a bounded spatial-sampler benchmark.
+
+**Facts confirmed**:
+- Server workspace is `/home/coder/project`.
+- Server environment is Conda env `panda312`, activated with `source envStart.sh`.
+- Server GPU is visible to PyTorch as `NVIDIA A100 80GB PCIe MIG 3g.40gb`.
+- Correct dataset source is Kaggle `pz19930809/pandaset`.
+- Server dataset root is `/home/coder/project/pandaset/PandaSet`.
+- PandaSet structure and access checks passed for sequence `001`, frame `0`, forward sensor `1`.
+- Dataset class split lengths are `training=4640`, `validation=720`, `test=720`.
+- Server loss check confirmed class weights are active in Open3D CE loss:
+  ```text
+  road  = 2.3753318786621094
+  lane  = 36.98638153076172
+  other = 1.6340690851211548
+  ```
+- `SemSegSpatiallyRegularSampler` benchmark on one 80-frame sequence took `80.982s`, estimating about `1.30h` for train sampler initialization and roughly `12min` for validation initialization.
+- `SemSegRandomSampler` completed both tiny and full-model one-step GPU smoke tests in about `6s`, including validation and checkpoint writing.
+
+**Decision**:
+- Use `SemSegRandomSampler` for C0.
+- Defer `SemSegSpatiallyRegularSampler` because it is class-blind and imposes a large eager CPU preprocessing cost before epoch 1.
+- Keep the planned C2 lane-aware sampler as the actual sampling contribution for the rare lane class.
+
+**New/updated reports**:
+- `logs/milestone_c/reports/c0_sampler_and_server_readiness.md`
+- `logs/milestone_c/reports/class_weight_decision.md`
+- `docs/milestone_c/README.md`
+- `docs/milestone_c_option_a_execution_plan.md`
+- `logs/milestone_c/reports/c0_prep_summary.md`
+
 ## Day 1
 
 **What this day did**: Day 1 verifies that the existing local project environment is the one the thesis pipeline should use, and that the core runtime foundation is still intact before any dataset or adapter work proceeds.

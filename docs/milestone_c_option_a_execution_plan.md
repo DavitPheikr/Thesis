@@ -1,6 +1,6 @@
 # Milestone C Option A Execution Plan
 
-Conservative end-to-end plan for moving from the current Milestone C entry state to a defensible thesis result.
+Conservative end-to-end plan for moving from the current Milestone C server-readiness state to a defensible thesis result.
 
 This plan follows **Option A**: stabilize a real RandLA-Net baseline first, then add low-risk dataset/input improvements that are directly motivated by the raw intensity analysis. It avoids architecture surgery, custom multi-head models, Lovasz loss, PCA geometry features, or other reach items until the simple path has produced a trustworthy baseline and ablation table.
 
@@ -24,6 +24,13 @@ These are the facts we should treat as the starting line.
 - Lane points are rare: about `0.70%` of training points.
 - Lane-aware sampling is not implemented yet.
 - Raw intensity analysis is complete under `logs/raw_intensity_analysis/`.
+- Server execution is now verified on `/home/coder/project` with Conda env `panda312`, PyTorch CUDA, Open3D, the patched PandaSet devkit, and the downloaded Kaggle `pz19930809/pandaset` dataset.
+- The confirmed server GPU is `NVIDIA A100 80GB PCIe MIG 3g.40gb`.
+- The server dataset root is `/home/coder/project/pandaset/PandaSet`.
+- C0 sampler policy is now `SemSegRandomSampler`, not `SemSegSpatiallyRegularSampler`.
+- `SemSegSpatiallyRegularSampler` was benchmarked and deferred because it eagerly preprocesses all split frames before epoch 1. The measured estimate was about `1.30h` for training sampler initialization plus about `12min` for validation initialization.
+- Class-weighted CE was verified live on the server. Effective CE weights are `road=2.3753`, `lane=36.9864`, `other=1.6341`.
+- Random-sampler GPU smoke tests completed for both tiny and full-model configs, including validation and checkpoint writing.
 
 Primary references:
 
@@ -81,6 +88,8 @@ Follow these throughout Milestone C.
 - Treat `num_points: 16384` as the default final experiment shape now that DigitalOcean GPU Droplets are available.
 - If `num_points: 16384` still cannot run on a suitably sized DigitalOcean GPU Droplet, document the chosen concession explicitly instead of hiding it.
 - Validation and test sampling must remain evaluation-realistic, not lane-centered.
+- C0 must use `SemSegRandomSampler` unless a later report explicitly supersedes the sampler decision. The spatial sampler is deferred because it is class-blind and imposes a large eager startup cost.
+- Do not use one-step smoke configs for real C0. Inspect `steps_per_epoch_train` and `steps_per_epoch_valid` before any long run.
 
 The label-leakage point is especially important. In the raw analysis, local contrast was allowed to compare lane points against raw road-surface classes because we were studying the dataset. In model training, the model will not know the true class labels at inference time, so features must be computed from geometry and intensity only.
 
@@ -317,6 +326,13 @@ Definition of done:
 Recommended starting policy:
 
 - Keep `open3d_native_from_measured_counts`, because it already passed the sanity run and is documented.
+- Server verification on 2026-05-05 confirmed this policy is actually active in Open3D's `CrossEntropyLoss`.
+- Expected and actual effective CE weights matched exactly: `[2.3753318786621094, 36.98638153076172, 1.6340690851211548]`.
+- These weights correspond to active classes `road/lane/other`, after ignored label `0` is filtered out.
+
+Important warning:
+
+- Do not paste direct inverse-frequency or sqrt-inverse-frequency vectors into `dataset.class_weights` unless `SemSegLoss` is patched. This Open3D runtime transforms the configured list again through `DataProcessing.get_class_weights(...)`.
 
 Do not tune class weights before the first baseline unless lane IoU is exactly zero and confusion matrix shows class collapse.
 
@@ -324,6 +340,7 @@ Definition of done:
 
 - One class-weight policy is selected.
 - Rationale is saved in `logs/milestone_c/reports/class_weight_decision.md`.
+- Server loss verification output is recorded.
 
 ### 6.5 Run C0 baseline
 
@@ -331,11 +348,25 @@ C0 baseline:
 
 - Input: `xyz + standardized_intensity`.
 - `in_channels: 4`.
-- Uniform/default Open3D-ML sampling.
+- Open3D `SemSegRandomSampler`.
 - Existing recenter augmentation only.
 - Weighted CE as currently configured.
 - No engineered features.
 - No lane-aware sampling.
+
+Sampler rationale:
+
+- `SemSegRandomSampler` is the C0 baseline sampler.
+- `SemSegSpatiallyRegularSampler` was measured at about `1.01s/frame` for eager initialization, estimating roughly `1.5h` total startup before epoch 1 on the full train+validation split.
+- The spatial sampler is class-blind and does not directly address the rare lane class.
+- The thesis sampling contribution remains C2 lane-aware patch sampling.
+
+Before launching a long C0:
+
+- Create or inspect a server config that uses the server dataset path and `SemSegRandomSampler`.
+- Ensure it is not a smoke config with `steps_per_epoch_train: 1` and `steps_per_epoch_valid: 1`.
+- Run a pilot such as `100` train steps and `50` validation steps to estimate runtime.
+- Then choose whether the full baseline uses `4640` train steps and `720` validation steps, or a documented smaller budget.
 
 Suggested run:
 

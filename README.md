@@ -25,7 +25,7 @@ This README is a **global orientation document**. It is intentionally broader an
 
 ## Current Status
 
-The repository is currently at **Milestone C entry**.
+The repository is currently in **Milestone C**.
 
 High-level status:
 
@@ -41,9 +41,14 @@ High-level status:
   - implemented the Open3D-ML dataset class
   - completed a bounded Day 6 sanity run
   - wrote stop conditions
-- **Milestone C**: not yet implemented
-  - not yet executed
-  - the repo has been cleaned into a Milestone C entry state
+- **Milestone C**: in progress
+  - real training entrypoint exists at `tools/train_milestone_c.py`
+  - validation metric artifacts are implemented for per-epoch mIoU, per-class metrics, lane distance buckets, and confusion matrices
+  - server setup has been verified on `/home/coder/project` with Conda env `panda312`
+  - server dataset root is `/home/coder/project/pandaset/PandaSet`
+  - C0 sampler decision is `SemSegRandomSampler`
+  - server smoke tests completed for both tiny and full-model random-sampler configs
+  - `SemSegSpatiallyRegularSampler` was benchmarked and deferred because it eagerly preprocesses the full split before epoch 1
   - the live config has `model.num_points: 16384` restored
   - the historical successful Day 6 config remains preserved separately in `logs/milestone_b_sanity_config_snapshot.yml`
 
@@ -51,6 +56,7 @@ Important boundary:
 
 - This repository has completed a **mechanical sanity pass**, not a final experiment campaign.
 - No performance claims should be inferred from the Milestone B sanity run.
+- Milestone C has completed server readiness and random-sampler smoke tests, but has not yet produced a final C0 performance baseline.
 
 ## Repository Structure
 
@@ -97,7 +103,7 @@ Configuration files live here.
 
 - `configs/randlanet_pandaset_ff_lane3.yml`
   - the current live pipeline config
-  - now cleaned for **Milestone C entry**
+  - now updated for **Milestone C C0 random-sampler baseline**
 - `configs/splits/`
   - frozen train/val/test sequence lists produced during Milestone B
 
@@ -131,6 +137,8 @@ Documentation is organized by purpose:
   - Milestone A documentation
 - `docs/milestone_b/`
   - Milestone B closeout documentation
+- `docs/milestone_c/`
+  - Milestone C notes and links to current C0 sampler/server readiness reports
 
 ### Environment and local dependencies
 
@@ -162,6 +170,10 @@ Conceptually, the current implemented path is:
 7. **Sanity-before-full-training policy**
    - Milestone B proved mechanical trainability
    - Milestone C begins from that state, not from final training validation
+8. **Milestone C C0 policy**
+   - random patch sampling through `SemSegRandomSampler`
+   - confirmed class-weighted CE for `road/lane/other`
+   - server smoke-tested training, validation, and checkpoint writing
 
 Important local runtime detail:
 
@@ -182,6 +194,12 @@ If you are new to the repo, these are the most important documents:
   - explains what Milestone B actually implemented and closed with
 - [Milestone B Day 6 prep and status](MILESTONE_B_DAY6_PREP_AND_STATUS.md)
   - focused Day 6 preparation/status document
+- [Milestone C notes](docs/milestone_c/README.md)
+  - current C0 sampler/server readiness context and links to Milestone C reports
+- [C0 sampler and server readiness](logs/milestone_c/reports/c0_sampler_and_server_readiness.md)
+  - server setup, dataset checks, spatial sampler bottleneck benchmark, random-sampler smoke results, and C0 sampler decision
+- [Class weight decision](logs/milestone_c/reports/class_weight_decision.md)
+  - Open3D-native class-weight policy and server loss verification
 
 ## How to Navigate This Repo
 
@@ -204,7 +222,7 @@ Practical navigation rule:
 - use `logs/` to understand what was actually verified
 - use `docs/` to understand milestone intent and history
 
-## Current Milestone C Entry State
+## Current Milestone C State
 
 The repo should currently be interpreted as follows:
 
@@ -212,8 +230,9 @@ The repo should currently be interpreted as follows:
   - exact historical record of the successful Day 6 sanity run
   - includes the temporary `num_points: 4096` concession used for that run
 - `configs/randlanet_pandaset_ff_lane3.yml`
-  - current live config for Milestone C entry
+  - current live config for Milestone C
   - `model.num_points` has been restored to `16384`
+  - C0 sampler is `SemSegRandomSampler`
   - duplicated `num_workers` keys have been cleaned
   - the config is still conservative in other ways (`batch_size: 1`, bounded epoch/step settings)
   - it should be treated as a **Milestone C starting point**, not as already revalidated full-training truth

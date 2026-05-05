@@ -11,7 +11,10 @@ dataset:
   ignored_label_inds: [0]
   test_result_folder: ./logs/test_results
   sampler:
-    name: SemSegSpatiallyRegularSampler
+    # Milestone C C0 uses RandLA-Net/Open3D random sampling. The spatially
+    # regular sampler was benchmarked on the server and deferred because it
+    # eagerly preprocesses the whole split before epoch 1.
+    name: SemSegRandomSampler
   split_dir: /home/pheikara/University/Y3S2/Thesis/Pipeline/configs/splits
   stats_file: /home/pheikara/University/Y3S2/Thesis/Pipeline/logs/milestone_b_training_statistics.json
   dataset_root_file: /home/pheikara/University/Y3S2/Thesis/Pipeline/logs/dataset_root.txt

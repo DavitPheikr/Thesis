@@ -168,7 +168,9 @@ def remap_raw_pandaset_ids(raw_labels: np.ndarray) -> np.ndarray:
 
 **Grid subsampling:** `grid_size: 0.04` (voxel grid at 4cm resolution; [configs/randlanet_pandaset_ff_lane3.yml:37](configs/randlanet_pandaset_ff_lane3.yml#L37))
 
-**Sampling type:** Uniform grid subsampling via Open3D-ML's `SemSegSpatiallyRegularSampler` (declared in config [configs/randlanet_pandaset_ff_lane3.yml:14](configs/randlanet_pandaset_ff_lane3.yml#L14))
+**Sampling type for C0:** Open3D-ML `SemSegRandomSampler` (declared in config [configs/randlanet_pandaset_ff_lane3.yml](configs/randlanet_pandaset_ff_lane3.yml)).
+
+`SemSegSpatiallyRegularSampler` was benchmarked on the server and deferred. It eagerly initializes sampler state by loading/preprocessing every frame before epoch 1, with a measured estimate of about `1.30h` for train initialization plus about `12min` for validation initialization on the full split. It is also class-blind, so it does not directly address rare lane-class sampling.
 
 **Lane-aware sampling:** Not yet implemented. Current split evidence:
 
@@ -311,15 +313,17 @@ augment:
 
 ### Metrics reported
 
-No metrics yet reported from full training runs (Milestone C not yet executed).
+No final C0 performance metrics have been reported yet.
 
 **Sanity-run loss trajectory:** Captured in [logs/milestone_b_sanity_train_report.txt](logs/milestone_b_sanity_train_report.txt)
 
-**Per-class metrics placeholder:** Metric computation code exists in Open3D-ML (mIoU, per-class IoU, confusion matrix, precision/recall) but is not yet invoked in Milestone C pipeline script.
+**Milestone C metric plumbing:** `tools/train_milestone_c.py` now writes per-epoch validation artifacts for mIoU, per-class IoU, precision, recall, F1, lane recall by distance bucket, confusion matrix, validation wall-clock time, and validation peak GPU memory.
+
+**Server smoke evidence:** random-sampler tiny and full-model one-step runs completed training, validation, and checkpoint writing. These are readiness checks, not final performance baselines.
 
 ### Confusion matrix and per-class breakdown
 
-**Not yet computed.** Sanity run reported only aggregate loss values.
+**Not yet computed for a final C0 run.** The Milestone C validation path can now write active-class confusion matrices, but the completed random-sampler smoke runs are too small to interpret as model performance.
 
 **Expected metrics (to be computed in Milestone C):**
 
@@ -382,17 +386,17 @@ No metrics yet reported from full training runs (Milestone C not yet executed).
 
 ### Project-specific constraints
 
-**Milestone status:** Currently at Milestone C entry
+**Milestone status:** Currently in Milestone C server-ready pre-C0 state
 
 - Milestone A: complete (single-sample verification)
 - Milestone B: complete (multi-sequence validation, split frozen, sanity run passed)
-- Milestone C: not yet executed (full training planned)
+- Milestone C: training entrypoint, validation metrics, server setup, dataset transfer, class-weight verification, sampler diagnosis, and random-sampler smoke tests are complete; final C0 baseline still pending.
 
 **Memory/compute:**
 
-- Single GPU (laptop/VS Code environment, limited VRAM)
-- OOM observed at `num_points: 16384` during Day 6 (4 failed attempts); concession to 4096 for sanity run
-- **Carry-forward:** Must revalidate baseline intent (16384) before full training; investigate root causes (batch size, num_workers, num_neighbors, sub_sampling_ratio, model dims) rather than permanently lowering num_points
+- Server GPU currently verified as `NVIDIA A100 80GB PCIe MIG 3g.40gb`.
+- OOM was observed locally at `num_points: 16384` during Day 6; the server full-model random-sampler one-step smoke at `num_points: 16384` completed successfully.
+- **Carry-forward:** before long C0, choose non-smoke train/validation step counts and inspect checkpoint cadence. Do not use `steps_per_epoch_train: 1` / `steps_per_epoch_valid: 1` outside smoke tests.
 
 **Reproducibility:**
 
@@ -456,15 +460,16 @@ No metrics yet reported from full training runs (Milestone C not yet executed).
      - `raw_inverse_frequency` (direct CE weights)
      - `sqrt_inverse_frequency` (downweighted strong imbalance)
      - `open3d_native_from_measured_counts` (measured counts, Open3D transforms them; used in sanity run)
-   - Only the third variant tested so far; decide on final policy before full training
+   - Server check confirmed the third variant is actually active in Open3D `CrossEntropyLoss`, with effective weights `road=2.3753`, `lane=36.9864`, `other=1.6341`.
 
 ### Known limitations / README notes
 
-**[README.md:207–243](README.md#L207-L243) – Milestone C entry state and notes:**
+**[README.md](README.md) – Milestone C state and notes:**
 
 - This repo has completed a **mechanical sanity pass**, not a final experiment campaign
 - No performance claims should be inferred from Milestone B sanity run
-- Successful Day 6 run does NOT prove final training readiness at intended baseline shape
+- Successful Day 6 run does NOT prove final model performance
+- Milestone C server smoke runs prove training/validation/checkpoint mechanics on the server, not final C0 quality
 - Live YAML is NOT the historical Day 6 run record; snapshot is at [logs/milestone_b_sanity_config_snapshot.yml](logs/milestone_b_sanity_config_snapshot.yml)
 - Measured values are canonical in JSON artifacts, not YAML
 
@@ -478,7 +483,7 @@ No metrics yet reported from full training runs (Milestone C not yet executed).
 
 ## Summary: Ready for Milestone C?
 
-**Status:** Yes, ready for full training milestone entry.
+**Status:** Yes, ready for a non-smoke C0 pilot with `SemSegRandomSampler`.
 
 **Prerequisites before launching Milestone C:**
 

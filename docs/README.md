@@ -6,3 +6,5 @@
   Milestone A documentation, including the completed Day 1-4 implementation writeup.
 - `milestone_b/`
   Reserved for Milestone B planning and execution documents.
+- `milestone_c/`
+  Current Milestone C notes, including C0 sampler/server readiness context and links to active reports.
