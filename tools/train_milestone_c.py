@@ -460,6 +460,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--steps-per-epoch-train", type=int)
     parser.add_argument("--steps-per-epoch-valid", type=int)
+    parser.add_argument("--save-ckpt-freq", type=int, default=10)
     parser.add_argument("--force", action="store_true")
     return parser.parse_args()
 
@@ -512,7 +513,7 @@ def git_status_text() -> str:
 def load_config(args: argparse.Namespace, run_dir: Path) -> dict:
     cfg = yaml.safe_load(args.config.read_text())
     cfg["pipeline"]["max_epoch"] = max(0, args.epochs - 1)
-    cfg["pipeline"]["save_ckpt_freq"] = 10
+    cfg["pipeline"]["save_ckpt_freq"] = args.save_ckpt_freq
     cfg["pipeline"]["main_log_dir"] = str(run_dir / "open3d_logs")
     cfg["pipeline"]["train_sum_dir"] = str(run_dir / "tensorboard")
     cfg["pipeline"].pop("real_training_allowed", None)
@@ -596,6 +597,8 @@ def main() -> None:
     args = parse_args()
     if args.epochs < 1:
         raise SystemExit("--epochs must be >= 1")
+    if args.save_ckpt_freq < 1:
+        raise SystemExit("--save-ckpt-freq must be >= 1")
     run_dir = prepare_run_dir(args.run_name, args.force)
     stdout_path = run_dir / "stdout.log"
 

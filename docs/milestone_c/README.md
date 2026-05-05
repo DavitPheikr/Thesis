@@ -49,6 +49,7 @@ pipeline:
 ```
 
 Estimated runtime for a 30-epoch full C0 run is about `36-42 hours` on the current A100 MIG server.
+For the official full run, pass `--save-ckpt-freq 1` so every epoch checkpoint is retained. Checkpoints are small enough for this to be worthwhile, and it preserves the exact best-validation-epoch model for later qualitative figures.
 
 ## Key Reports
 

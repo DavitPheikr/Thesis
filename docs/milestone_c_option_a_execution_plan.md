@@ -421,6 +421,7 @@ Before launching a long C0:
 - Create or inspect a server config that uses the server dataset path and `SemSegRandomSampler`.
 - Ensure it is not a smoke config with `steps_per_epoch_train: 1` and `steps_per_epoch_valid: 1`.
 - Use the calibrated official C0 settings: `steps_per_epoch_train: 4640`, `steps_per_epoch_valid: 720`, `batch_size: 1`, `val_batch_size: 1`, `num_workers: 0`, `pin_memory: false`.
+- Pass `--save-ckpt-freq 1` for the official full run so the exact best validation epoch is available for later analysis and qualitative visualization.
 - Run detached and expect about `36-42h` for 30 epochs on the current server.
 
 Suggested run:
