@@ -263,8 +263,7 @@ class MilestoneCPipeline(SemanticSegmentation):
             else:
                 self._write_training_log_after_validation_failure(epoch)
 
-            if epoch % cfg.save_ckpt_freq == 0 or epoch == cfg.max_epoch:
-                self.save_ckpt(epoch)
+            self.save_ckpt(epoch)
 
         writer.close()
 
@@ -433,7 +432,9 @@ class MilestoneCPipeline(SemanticSegmentation):
 
     def save_ckpt(self, epoch):
         human_epoch = epoch + 1
-        if human_epoch % 10 != 0 and human_epoch != self.requested_epochs:
+        save_freq = int(self.cfg.get("save_ckpt_freq", 10))
+        should_save_periodic = save_freq > 0 and human_epoch % save_freq == 0
+        if not should_save_periodic and human_epoch != self.requested_epochs:
             return
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
         path = self.checkpoint_dir / f"ckpt_epoch_{human_epoch:05d}.pth"

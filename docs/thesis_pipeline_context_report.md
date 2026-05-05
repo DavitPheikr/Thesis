@@ -396,7 +396,7 @@ No final C0 performance metrics have been reported yet.
 
 - Server GPU currently verified as `NVIDIA A100 80GB PCIe MIG 3g.40gb`.
 - OOM was observed locally at `num_points: 16384` during Day 6; the server full-model random-sampler one-step smoke at `num_points: 16384` completed successfully.
-- **Carry-forward:** before long C0, choose non-smoke train/validation step counts and inspect checkpoint cadence. Do not use `steps_per_epoch_train: 1` / `steps_per_epoch_valid: 1` outside smoke tests.
+- **Carry-forward:** before long C0, choose non-smoke train/validation step counts. Checkpoint cadence was patched so periodic saves use human epoch numbers from `cfg.save_ckpt_freq`; do not use `steps_per_epoch_train: 1` / `steps_per_epoch_valid: 1` outside smoke tests.
 
 **Reproducibility:**
 

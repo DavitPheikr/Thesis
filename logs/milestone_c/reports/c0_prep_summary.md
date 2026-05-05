@@ -66,7 +66,7 @@
 - Server smoke path is now confirmed with random sampling.
 - Validation metric plumbing is implemented and has run through successful random-sampler smoke epochs.
 - Do not use smoke configs with `steps_per_epoch_train: 1` / `steps_per_epoch_valid: 1` for real C0.
-- Before a long C0, choose real step counts and inspect checkpoint save cadence.
+- Before a long C0, choose real step counts. Checkpoint cadence was patched so the custom saver uses `cfg.save_ckpt_freq` on human epoch numbers and still saves the final requested epoch.
 - Split audit is still blocked for strict verdict rules because complete per-sequence class counts exist for train only, not val/test.
 
 ## Follow-Up Cleanup

@@ -310,7 +310,7 @@ This is cleaner than trying to make Open3D's generic spatial sampler the samplin
 - Server-generated configs under `logs/milestone_c/configs/` may still contain smoke values such as `steps_per_epoch_train: 1` and `steps_per_epoch_valid: 1`; do not use those unchanged for a real C0 run.
 - Full validation with `steps_per_epoch_valid: 720` gives one sampled patch per validation frame, not exhaustive all-point validation.
 - Random validation has sampling noise. Use enough validation steps to make curves meaningful.
-- Checkpoint save cadence should be checked before a long run. The current code uses a custom checkpoint filter and should save final checkpoints, but intermediate cadence deserves one more quick review before a multi-hour run.
+- Checkpoint save cadence has been patched locally after this report's sampler diagnosis: `save_ckpt()` now uses `cfg.save_ckpt_freq` on human epoch numbers and saves the final requested epoch.
 - The spatial sampler might become feasible with a custom lazy implementation or sequence-level caching, but it is not needed for C0.
 
 ## Recommended Next Run Config Direction
