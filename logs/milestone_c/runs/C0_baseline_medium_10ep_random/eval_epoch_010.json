@@ -1,0 +1,65 @@
+{
+  "epoch": 10,
+  "train_loss": 0.3397109700292349,
+  "val_loss": 0.4081755049340427,
+  "peak_gpu_memory_bytes_val": 214071808,
+  "val_wall_clock_seconds": 170.09539209725335,
+  "metrics": {
+    "miou": 0.5580026375244845,
+    "per_class": {
+      "road": {
+        "iou": 0.7044058728693485,
+        "precision": 0.73355196243516,
+        "recall": 0.9466056229936435,
+        "f1": 0.8265705769758808
+      },
+      "lane": {
+        "iou": 0.1608351684201941,
+        "precision": 0.18573693546614758,
+        "recall": 0.545379119612814,
+        "f1": 0.2771025082554627
+      },
+      "other": {
+        "iou": 0.8087668712839112,
+        "precision": 0.9843641326420308,
+        "recall": 0.8192920208321612,
+        "f1": 0.8942743082305866
+      }
+    },
+    "confusion_matrix": [
+      [
+        1038557,
+        31883,
+        26698
+      ],
+      [
+        8572,
+        11832,
+        1291
+      ],
+      [
+        368663,
+        19988,
+        1762062
+      ]
+    ],
+    "lane_recall_by_distance": {
+      "0to10m": 0.4529889727219965,
+      "10to20m": 0.5120967741935484,
+      "20to30m": 0.6172473437113911,
+      "30plus": 0.6765285996055227
+    },
+    "support": {
+      "road": 1097138,
+      "lane": 21695,
+      "other": 2150713
+    },
+    "prediction_count": 3269546
+  },
+  "class_indexing": {
+    "0": "road",
+    "1": "lane",
+    "2": "other",
+    "source": "Open3D filter_valid_label compresses raw labels 1/2/3 after ignoring raw label 0."
+  }
+}
