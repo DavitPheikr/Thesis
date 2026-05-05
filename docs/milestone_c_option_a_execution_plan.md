@@ -31,6 +31,10 @@ These are the facts we should treat as the starting line.
 - `SemSegSpatiallyRegularSampler` was benchmarked and deferred because it eagerly preprocesses all split frames before epoch 1. The measured estimate was about `1.30h` for training sampler initialization plus about `12min` for validation initialization.
 - Class-weighted CE was verified live on the server. Effective CE weights are `road=2.3753`, `lane=36.9864`, `other=1.6341`.
 - Random-sampler GPU smoke tests completed for both tiny and full-model configs, including validation and checkpoint writing.
+- C0 medium-run evidence now exists. A 10-epoch batch-size-1 medium run learned successfully and produced the best lane balance observed so far.
+- Batch-size-2 was tested with a matching 10-epoch medium run. It completed and learned, but was slower in the realistic run and over-predicted lane by epoch 10.
+- Runtime benchmarks showed `num_workers > 0` is unstable on the current server because DataLoader workers segfault. `pin_memory=true` was slower in the zero-worker setting.
+- Official C0 full-run settings should be `batch_size=1`, `val_batch_size=1`, `num_workers=0`, `pin_memory=false`, `steps_per_epoch_train=4640`, and `steps_per_epoch_valid=720`.
 
 Primary references:
 
@@ -41,6 +45,8 @@ Primary references:
 - `logs/milestone_b_stop_conditions.txt`
 - `logs/raw_intensity_analysis/reports/final/intensity_notes.md`
 - `logs/raw_intensity_analysis/reports/final/plots.md`
+- `logs/milestone_c/reports/c0_sampler_and_server_readiness.md`
+- `logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md`
 
 ---
 
@@ -90,6 +96,9 @@ Follow these throughout Milestone C.
 - Validation and test sampling must remain evaluation-realistic, not lane-centered.
 - C0 must use `SemSegRandomSampler` unless a later report explicitly supersedes the sampler decision. The spatial sampler is deferred because it is class-blind and imposes a large eager startup cost.
 - Do not use one-step smoke configs for real C0. Inspect `steps_per_epoch_train` and `steps_per_epoch_valid` before any long run.
+- On the current server, official C0 must use `num_workers: 0`; worker subprocesses have repeatedly segfaulted.
+- On the current server, official C0 should use `pin_memory: false`; pinned memory slowed zero-worker benchmarks.
+- Official C0 should use `batch_size: 1` unless a later report supersedes this. Batch size 2 was slower in the realistic medium run and produced worse lane precision/F1 by over-predicting lane.
 
 The label-leakage point is especially important. In the raw analysis, local contrast was allowed to compare lane points against raw road-surface classes because we were studying the dataset. In model training, the model will not know the true class labels at inference time, so features must be computed from geometry and intensity only.
 
@@ -249,6 +258,12 @@ Definition of done:
 - A short 1-epoch run starts and exits cleanly.
 - The run folder contains config snapshot, seed, and log file.
 
+Current status:
+
+- Done on server for random-sampler smoke runs.
+- Done for `C0_baseline_medium_10ep_random` and `C0_baseline_medium_10ep_random_bs2`.
+- The official full C0 run is still pending.
+
 ### 6.2 Add full validation metrics
 
 The baseline must report more than loss.
@@ -273,11 +288,50 @@ logs/milestone_c/runs/C0_baseline/eval_epoch_001.json
 logs/milestone_c/runs/C0_baseline/confusion_epoch_001.npy
 ```
 
+After the run, generate human-readable plots and a compact report:
+
+```bash
+./panda/bin/python tools/plot_milestone_c_run.py --run-name C0_baseline
+```
+
+Expected plot/report outputs:
+
+- `plots/metrics_overview.png`
+- `plots/loss_curves.png`
+- `plots/per_class_iou.png`
+- `plots/lane_precision_recall_f1.png`
+- `plots/lane_recall_by_distance.png`
+- `plots/runtime_and_memory.png`
+- `plots/class_true_vs_predicted_share.png`
+- `plots/confusion_epoch_<NNN>.png`
+- `plots/confusion_best_lane_f1_epoch_<NNN>.png`
+- `plots/run_summary.md`
+
 Why this matters:
 
 - `mIoU` tells overall segmentation quality.
 - `lane IoU` tells whether the thesis target is working.
 - `lane precision` tells whether stop lines/other bright markings are being predicted as lane.
+
+Current status:
+
+- Implemented in `tools/train_milestone_c.py`.
+- Verified through 10-epoch medium runs.
+- Batch-size-1 medium run final values:
+  ```text
+  train_loss 0.339711
+  val_loss   0.408176
+  mIoU       0.558003
+  lane_iou   0.160835
+  lane_f1    0.277103
+  ```
+- Batch-size-1 best lane epoch was epoch 7:
+  ```text
+  lane_iou 0.192446
+  lane_precision 0.250676
+  lane_recall 0.453093
+  lane_f1 0.322776
+  ```
 - `lane recall` tells whether the model is missing lanes.
 - The confusion matrix tells which failure mode dominates.
 
@@ -286,7 +340,7 @@ Definition of done:
 - One short run produces all metrics above.
 - The confusion matrix can be inspected and matches the three active classes.
 
-### 6.3 Revalidate `num_points: 16384` on DigitalOcean
+### 6.3 Revalidate `num_points: 16384` on the server
 
 Train at the intended shape:
 
@@ -295,13 +349,14 @@ model:
   num_points: 16384
 ```
 
-Because DigitalOcean GPU Droplets are available, the expected path is:
+Status:
 
-1. Run a 1-step smoke test at `16384` on the target Droplet type.
-2. Run a 50-step stability test at `16384` and log peak GPU memory.
-3. Run the real C0 baseline at `16384`.
+- Done for the current A100 MIG server.
+- Full-model random-sampler smoke runs completed at `16384`.
+- Both 10-epoch medium C0 runs completed at `16384`.
+- Official full C0 should therefore keep `num_points: 16384`.
 
-If `16384` still OOMs on the chosen Droplet, then test concessions in this order:
+If `16384` unexpectedly OOMs during the official full run, test concessions in this order:
 
 1. Use a larger DigitalOcean GPU Droplet if practical, for example H200 instead of H100, or H100/H200 instead of L40S/RTX 6000.
 2. Reduce validation/checkpoint overhead if that is causing memory spikes.
@@ -317,9 +372,9 @@ Important:
 
 Definition of done:
 
-- A 50-step DigitalOcean run completes at `num_points: 16384`, or a concession is documented.
+- Server smoke and medium runs complete at `num_points: 16384`, or a concession is documented.
 - Peak memory is logged.
-- The chosen `num_points` is justified in `logs/milestone_c/reports/num_points_decision.md`.
+- The chosen `num_points` is justified in `logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md`.
 
 ### 6.4 Lock class-weight policy for baseline
 
@@ -365,8 +420,8 @@ Before launching a long C0:
 
 - Create or inspect a server config that uses the server dataset path and `SemSegRandomSampler`.
 - Ensure it is not a smoke config with `steps_per_epoch_train: 1` and `steps_per_epoch_valid: 1`.
-- Run a pilot such as `100` train steps and `50` validation steps to estimate runtime.
-- Then choose whether the full baseline uses `4640` train steps and `720` validation steps, or a documented smaller budget.
+- Use the calibrated official C0 settings: `steps_per_epoch_train: 4640`, `steps_per_epoch_valid: 720`, `batch_size: 1`, `val_batch_size: 1`, `num_workers: 0`, `pin_memory: false`.
+- Run detached and expect about `36-42h` for 30 epochs on the current server.
 
 Suggested run:
 
@@ -374,7 +429,7 @@ Suggested run:
 - Evaluate every epoch and inspect the validation IoU curves.
 - If validation lane IoU and mIoU are still climbing at epoch 30, run longer.
 - If the curves plateau earlier, future ablation runs can be shortened with that evidence.
-- If still debugging, do 2 epochs first, then 10, then 30.
+- The 2-epoch pilot and 10-epoch medium stages are already complete; the next C0 step is the official full run.
 
 Definition of done:
 

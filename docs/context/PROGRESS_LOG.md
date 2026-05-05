@@ -1,5 +1,51 @@
 # PROGRESS_LOG
 
+## Milestone C C0 Medium Runs And Speed Calibration - 2026-05-05
+
+**What this update did**: recorded the first non-smoke C0 medium runs and training-system benchmarks, then selected the official full C0 runtime settings.
+
+**Facts confirmed**:
+- `C0_baseline_medium_10ep_random` completed 10 epochs with `batch_size=1`, `val_batch_size=1`, `num_workers=0`, `pin_memory=false`, `500` train steps, and `200` validation steps.
+- Batch-size-1 C0 learned over 10 epochs:
+  ```text
+  train_loss 0.708701 -> 0.339711
+  val_loss   0.489297 -> 0.408176
+  mIoU       0.502071 -> 0.558003
+  lane_iou   0.077419 -> 0.160835
+  lane_f1    0.143712 -> 0.277103
+  ```
+- Batch-size-1 best lane result was epoch 7:
+  ```text
+  lane_iou 0.192446
+  lane_precision 0.250676
+  lane_recall 0.453093
+  lane_f1 0.322776
+  ```
+- `C0_baseline_medium_10ep_random_bs2` completed 10 epochs with `batch_size=2`, but was slower in the realistic medium run and over-predicted lane by epoch 10.
+- Batch-size-2 final lane behavior:
+  ```text
+  lane_precision 0.104447
+  lane_recall    0.925006
+  lane_f1        0.187700
+  true_lane_pct  about 0.66%
+  pred_lane_pct  about 5.88%
+  ```
+- Batch-size-1 average epoch time after warmup was about `576s`; batch-size-2 average epoch time after warmup was about `644s`.
+- Speed benchmarks confirmed `num_workers=1`, `2`, and `4` all fail with DataLoader worker segmentation faults.
+- Speed benchmarks confirmed `pin_memory=true` slows zero-worker runs.
+- TensorBoard CLI currently errors with missing `pkg_resources`, but training is not blocked because `SummaryWriter` completed inside the training script.
+
+**Decision**:
+- Use `batch_size=1`, `val_batch_size=1`, `num_workers=0`, `pin_memory=false`, `device=cuda` for the official full C0 baseline.
+- Use `SemSegRandomSampler` with `steps_per_epoch_train=4640` and `steps_per_epoch_valid=720` for the official C0 baseline.
+- Treat DataLoader worker support as a future engineering optimization, not a blocker for thesis experiments.
+
+**New/updated reports**:
+- `logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md`
+- `logs/milestone_c/reports/c0_sampler_and_server_readiness.md`
+- `logs/milestone_c/reports/c0_prep_summary.md`
+- `docs/milestone_c/README.md`
+
 ## Milestone C Server And Sampler Update - 2026-05-05
 
 **What this update did**: recorded the current Milestone C server state and resolved the C0 sampler decision after GPU smoke tests and a bounded spatial-sampler benchmark.

@@ -15,6 +15,22 @@
 - Spatial sampler status: deferred for C0. It is class-blind and expensive at startup; the planned C2 lane-aware sampler remains the sampling contribution that directly targets lane rarity.
 - Detailed current report: `logs/milestone_c/reports/c0_sampler_and_server_readiness.md`.
 
+## C0 Medium-Run And Benchmark Update: 2026-05-05
+
+- New detailed report: `logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md`.
+- Batch-size-1 medium run: `C0_baseline_medium_10ep_random`, 10 epochs, `500` train steps, `200` validation steps, `batch_size=1`, `num_workers=0`, `pin_memory=false`.
+- Batch-size-1 result: train loss improved `0.708701 -> 0.339711`, val loss improved `0.489297 -> 0.408176`, mIoU improved `0.502071 -> 0.558003`, lane IoU improved `0.077419 -> 0.160835`, lane F1 improved `0.143712 -> 0.277103`.
+- Batch-size-1 best lane epoch: epoch 7, lane IoU `0.192446`, lane precision `0.250676`, lane recall `0.453093`, lane F1 `0.322776`.
+- Batch-size-1 runtime: about `576s` per epoch after warmup, peak PyTorch GPU memory about `214MB`.
+- Batch-size-2 medium run: `C0_baseline_medium_10ep_random_bs2`, 10 epochs, same train/validation step settings, `batch_size=2`, `num_workers=0`, `pin_memory=false`.
+- Batch-size-2 result: completed and learned, but was slower in the realistic medium run and over-predicted lane by epoch 10. Final lane precision/recall/F1 was `0.104447 / 0.925006 / 0.187700`, with predicted lane about `5.88%` while true lane support was about `0.66%`.
+- Batch-size-2 runtime: about `644s` per epoch after warmup, peak PyTorch GPU memory about `281MB`.
+- Speed benchmarks showed that `num_workers=1`, `2`, and `4` all fail with DataLoader worker segmentation faults. Do not use worker subprocesses for official C0 on this environment.
+- Speed benchmarks showed that `pin_memory=true` is slower than `pin_memory=false` for zero-worker runs.
+- Official C0 runtime recommendation: `batch_size=1`, `val_batch_size=1`, `num_workers=0`, `pin_memory=false`, `device=cuda`.
+- Official C0 step recommendation: `steps_per_epoch_train=4640`, `steps_per_epoch_valid=720`, with `SemSegRandomSampler`.
+- Estimated official 30-epoch C0 runtime on the current server: about `36-42 hours`.
+
 ## Training Script Status
 
 - File: `tools/train_milestone_c.py`

@@ -313,7 +313,50 @@ This is cleaner than trying to make Open3D's generic spatial sampler the samplin
 - Checkpoint save cadence has been patched locally after this report's sampler diagnosis: `save_ckpt()` now uses `cfg.save_ckpt_freq` on human epoch numbers and saves the final requested epoch.
 - The spatial sampler might become feasible with a custom lazy implementation or sequence-level caching, but it is not needed for C0.
 
-## Recommended Next Run Config Direction
+## Post-Readiness Medium Runs And Benchmark Update
+
+After the sampler/server-readiness work, two 10-epoch medium C0 runs and two speed-benchmark sweeps were completed on the server.
+
+Detailed report:
+
+```text
+logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md
+```
+
+Key conclusions:
+
+- `batch_size=1`, `val_batch_size=1`, `num_workers=0`, `pin_memory=false` is the recommended official C0 runtime setting.
+- A 10-epoch batch-size-1 medium run learned successfully and produced the best lane balance observed so far.
+- A 10-epoch batch-size-2 medium run completed, but was slower in the realistic medium run and over-predicted lane by epoch 10.
+- `num_workers > 0` is currently unsafe. Worker counts 1, 2, and 4 all produced DataLoader worker segmentation faults.
+- `pin_memory=true` was slower than `pin_memory=false` when `num_workers=0`.
+- The TensorBoard CLI currently errors with missing `pkg_resources`; this does not block training because `SummaryWriter` still runs inside `tools/train_milestone_c.py`.
+
+Official full C0 direction:
+
+```yaml
+dataset:
+  sampler:
+    name: SemSegRandomSampler
+  steps_per_epoch_train: 4640
+  steps_per_epoch_valid: 720
+
+pipeline:
+  batch_size: 1
+  val_batch_size: 1
+  num_workers: 0
+  pin_memory: false
+  device: cuda
+```
+
+Estimated full C0 runtime:
+
+```text
+about 73 minutes per epoch
+about 36-42 hours for 30 epochs
+```
+
+## Historical Recommended Next Run Config Direction
 
 For a short pilot:
 

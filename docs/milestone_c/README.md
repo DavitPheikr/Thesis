@@ -18,11 +18,44 @@ Important current decisions:
 - Defer `SemSegSpatiallyRegularSampler` because it eagerly preprocesses the full split before epoch 1.
 - Keep Open3D-native measured-count class weights; server verification confirmed they are active in the CE loss.
 - Use the server dataset path `/home/coder/project/pandaset/PandaSet` for cloud runs.
+- Official full C0 should use `batch_size: 1`, `val_batch_size: 1`, `num_workers: 0`, and `pin_memory: false`.
+- Do not use PyTorch DataLoader workers on the current server setup; `num_workers > 0` repeatedly segfaulted in worker subprocesses.
+- Do not use `pin_memory: true` for the zero-worker C0 path; it was slower in server benchmarks.
+
+## Current Evidence
+
+The server now has more than smoke evidence:
+
+- Random-sampler one-step smoke runs proved the CUDA, validation, and checkpoint paths.
+- A 10-epoch medium C0 run with `batch_size=1` showed real learning and the best lane balance observed so far.
+- A 10-epoch medium run with `batch_size=2` completed, but was slower in the realistic run and over-predicted lane by epoch 10.
+- Speed benchmarks showed that `num_workers=1/2/4` are unstable and that `pin_memory=true` slows zero-worker runs.
+
+Recommended full C0 settings:
+
+```yaml
+dataset:
+  sampler:
+    name: SemSegRandomSampler
+  steps_per_epoch_train: 4640
+  steps_per_epoch_valid: 720
+
+pipeline:
+  batch_size: 1
+  val_batch_size: 1
+  num_workers: 0
+  pin_memory: false
+  device: cuda
+```
+
+Estimated runtime for a 30-epoch full C0 run is about `36-42 hours` on the current A100 MIG server.
 
 ## Key Reports
 
 - `logs/milestone_c/reports/c0_sampler_and_server_readiness.md`
   - server readiness, dataset checks, sampler benchmark, smoke results, and C0 sampler decision.
+- `logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md`
+  - 10-epoch medium C0 results, batch-size comparison, DataLoader worker failures, pin-memory benchmarks, and final full-run settings.
 - `logs/milestone_c/reports/class_weight_decision.md`
   - class-weight policy and server loss verification.
 - `logs/milestone_c/reports/validation_metrics_prep.md`
@@ -31,6 +64,32 @@ Important current decisions:
   - historical C0 prep summary plus current server update.
 - `docs/milestone_c_option_a_execution_plan.md`
   - full C0-C4 experiment plan.
+
+## Post-Run Plots
+
+After any Milestone C run has an `eval_history.csv`, generate thesis-friendly plots and a compact run summary with:
+
+```bash
+./panda/bin/python tools/plot_milestone_c_run.py --run-name C0_baseline_full_30ep_random_bs1
+```
+
+On the server, use the active Conda Python instead:
+
+```bash
+python tools/plot_milestone_c_run.py --run-name C0_baseline_full_30ep_random_bs1
+```
+
+The script writes `plots/` inside the run directory, including:
+
+- `metrics_overview.png`
+- `loss_curves.png`
+- `per_class_iou.png`
+- `lane_precision_recall_f1.png`
+- `lane_recall_by_distance.png`
+- `runtime_and_memory.png`
+- `class_true_vs_predicted_share.png`
+- final and best-lane-F1 confusion-matrix heatmaps
+- `run_summary.md`
 
 ## Server-Specific Reminder
 

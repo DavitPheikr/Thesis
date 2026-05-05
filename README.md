@@ -48,6 +48,9 @@ High-level status:
   - server dataset root is `/home/coder/project/pandaset/PandaSet`
   - C0 sampler decision is `SemSegRandomSampler`
   - server smoke tests completed for both tiny and full-model random-sampler configs
+  - 10-epoch medium C0 runs completed for batch size 1 and batch size 2
+  - batch size 1 gave the best lane balance and is the official full C0 recommendation
+  - DataLoader workers are currently unsafe on the server; `num_workers > 0` segfaulted
   - `SemSegSpatiallyRegularSampler` was benchmarked and deferred because it eagerly preprocesses the full split before epoch 1
   - the live config has `model.num_points: 16384` restored
   - the historical successful Day 6 config remains preserved separately in `logs/milestone_b_sanity_config_snapshot.yml`
@@ -56,7 +59,7 @@ Important boundary:
 
 - This repository has completed a **mechanical sanity pass**, not a final experiment campaign.
 - No performance claims should be inferred from the Milestone B sanity run.
-- Milestone C has completed server readiness and random-sampler smoke tests, but has not yet produced a final C0 performance baseline.
+- Milestone C has completed server readiness, random-sampler smoke tests, and medium C0 calibration runs, but has not yet produced the official full C0 baseline.
 
 ## Repository Structure
 
@@ -198,6 +201,8 @@ If you are new to the repo, these are the most important documents:
   - current C0 sampler/server readiness context and links to Milestone C reports
 - [C0 sampler and server readiness](logs/milestone_c/reports/c0_sampler_and_server_readiness.md)
   - server setup, dataset checks, spatial sampler bottleneck benchmark, random-sampler smoke results, and C0 sampler decision
+- [C0 medium runs and speed benchmarks](logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md)
+  - 10-epoch medium-run metrics, batch-size comparison, DataLoader worker failures, pin-memory benchmarks, post-run plotting workflow, and official C0 runtime recommendation
 - [Class weight decision](logs/milestone_c/reports/class_weight_decision.md)
   - Open3D-native class-weight policy and server loss verification
 
@@ -234,15 +239,16 @@ The repo should currently be interpreted as follows:
   - `model.num_points` has been restored to `16384`
   - C0 sampler is `SemSegRandomSampler`
   - duplicated `num_workers` keys have been cleaned
-  - the config is still conservative in other ways (`batch_size: 1`, bounded epoch/step settings)
-  - it should be treated as a **Milestone C starting point**, not as already revalidated full-training truth
+  - official C0 runtime settings are `batch_size: 1`, `val_batch_size: 1`, `num_workers: 0`, and `pin_memory: false`
+  - server-generated configs should override local paths and use non-smoke step counts for long runs
+  - bounded epoch/step settings in the live config are not the official full-run counts
 
 Milestone C therefore starts from a repo that is:
 
 - mechanically training-capable
 - explicitly measured and documented
 - still carrying forward open questions such as:
-  - revalidating `16384`
+  - completing the official full C0 baseline
   - oversampling strategy
   - class-weight policy refinement
   - Day 6 reporting cleanup
