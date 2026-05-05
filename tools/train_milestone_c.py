@@ -115,19 +115,26 @@ class MilestoneCPipeline(SemanticSegmentation):
     def run_train(self):
         """Train with per-epoch Milestone C validation metric artifacts."""
 
+        print("run_train_seed_start", flush=True)
         torch.manual_seed(self.rng.integers(np.iinfo(np.int32).max))
+        print("run_train_seed_done", flush=True)
         model = self.model
         device = self.device
         model.device = device
         dataset = self.dataset
         cfg = self.cfg
+        print("run_train_model_to_device_start", flush=True)
         model.to(device)
+        print("run_train_model_to_device_done", flush=True)
 
+        print("run_train_loss_metric_batcher_start", flush=True)
         loss_fn = SemSegLoss(self, model, dataset, device)
         self.metric_train = SemSegMetric()
         self.metric_val = SemSegMetric()
         self.batcher = self.get_batcher(device)
+        print("run_train_loss_metric_batcher_done", flush=True)
 
+        print("run_train_train_split_start", flush=True)
         train_dataset = dataset.get_split("train")
         train_sampler = train_dataset.sampler
         train_split = TorchDataloader(
@@ -138,6 +145,8 @@ class MilestoneCPipeline(SemanticSegmentation):
             use_cache=dataset.cfg.use_cache,
             steps_per_epoch=dataset.cfg.get("steps_per_epoch_train", None),
         )
+        print("run_train_train_split_done", flush=True)
+        print("run_train_train_loader_start", flush=True)
         train_loader = DataLoader(
             train_split,
             batch_size=cfg.batch_size,
@@ -149,7 +158,9 @@ class MilestoneCPipeline(SemanticSegmentation):
                 x + np.uint32(torch.utils.data.get_worker_info().seed)
             ),
         )
+        print("run_train_train_loader_done", flush=True)
 
+        print("run_train_valid_split_start", flush=True)
         valid_dataset = dataset.get_split("validation")
         assert valid_dataset.split == "validation", (
             "Milestone C validation metrics must use configs/splits/val.txt "
@@ -164,6 +175,8 @@ class MilestoneCPipeline(SemanticSegmentation):
             use_cache=dataset.cfg.use_cache,
             steps_per_epoch=dataset.cfg.get("steps_per_epoch_valid", None),
         )
+        print("run_train_valid_split_done", flush=True)
+        print("run_train_valid_loader_start", flush=True)
         valid_loader = DataLoader(
             valid_split,
             batch_size=cfg.val_batch_size,
@@ -175,10 +188,16 @@ class MilestoneCPipeline(SemanticSegmentation):
                 x + np.uint32(torch.utils.data.get_worker_info().seed)
             ),
         )
+        print("run_train_valid_loader_done", flush=True)
 
+        print("run_train_optimizer_start", flush=True)
         self.optimizer, self.scheduler = model.get_optimizer(cfg)
+        print("run_train_optimizer_done", flush=True)
+        print("run_train_load_ckpt_start", flush=True)
         self.load_ckpt(model.cfg.ckpt_path, is_resume=model.cfg.get("is_resume", True))
+        print("run_train_load_ckpt_done", flush=True)
 
+        print("run_train_tensorboard_start", flush=True)
         dataset_name = dataset.name if dataset is not None else ""
         tensorboard_dir = (
             Path(self.cfg.train_sum_dir)
@@ -189,11 +208,14 @@ class MilestoneCPipeline(SemanticSegmentation):
             Path(self.cfg.train_sum_dir) / f"{runid}_{tensorboard_dir.name}"
         )
         writer = SummaryWriter(self.tensorboard_dir)
+        print("run_train_tensorboard_done", flush=True)
+        print("run_train_save_config_start", flush=True)
         self.save_config(writer)
+        print("run_train_save_config_done", flush=True)
         record_summary = cfg.get("summary").get("record_for", [])
 
         for epoch in range(0, cfg.max_epoch + 1):
-            print(f"epoch_start {epoch}")
+            print(f"epoch_start {epoch}", flush=True)
             model.train()
             self.metric_train.reset()
             self.metric_val.reset()
