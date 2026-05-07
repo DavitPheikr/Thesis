@@ -23,24 +23,20 @@ Important current-doc note: DigitalOcean docs now say the NVIDIA **AI/ML-ready**
 3. Choose **GPU Droplets**.
 
 4. Choose the region:
-
    - Select **AMS3 Amsterdam**.
    - Reason: you are in Bremen, Germany, so Amsterdam should give low latency.
 
 5. Choose the image:
-
    - Go to the **Marketplace** tab.
    - Select **AI/ML Ready v1.0** or the current NVIDIA AI/ML Ready GPU image shown by DigitalOcean.
    - API image slug for single-GPU NVIDIA plans: `gpu-h100x1-base`.
    - DigitalOcean uses this slug for all single-GPU NVIDIA AI/ML-ready GPU Droplets, even non-H100 plans.
 
 6. Confirm expected base software:
-
    - Current DigitalOcean docs for NVIDIA AI/ML-ready GPU Droplets: Ubuntu 22.04, CUDA Toolkit 13.1, NVIDIA driver stack 590, `nvidia-container-toolkit` preinstalled.
    - If the dashboard explicitly shows CUDA 12.9 / driver 575, that is likely the inference-optimized image. Avoid it for now unless we deliberately choose it later.
 
 7. Choose the GPU plan:
-
    - Recommended for this first iteration: **NVIDIA RTX 6000 Ada**.
    - DigitalOcean size slug: `gpu-6000adax1-48gb`.
    - VRAM: 48 GB.
@@ -49,7 +45,6 @@ Important current-doc note: DigitalOcean docs now say the NVIDIA **AI/ML-ready**
    - H100 is currently listed at `$3.39/hour`; consider it later only if the real baseline benefits from it.
 
 8. Authentication:
-
    - Use SSH key authentication.
    - Before creating the Droplet, verify your SSH key is uploaded:
    - DigitalOcean dashboard → **Settings** → **Security** → **SSH Keys**.
@@ -57,23 +52,22 @@ Important current-doc note: DigitalOcean docs now say the NVIDIA **AI/ML-ready**
    - If missing, upload the contents of `~/.ssh/id_ed25519.pub` or the public key you normally use.
 
 9. Hostname:
-
    - Use `thesis-c0-smoke`.
 
 10. Optional features:
 
-   - Skip backups.
-   - Skip metrics/monitoring for this first short iteration.
-   - Skip user data/cloud-init.
-   - Keep networking/default project settings minimal.
+- Skip backups.
+- Skip metrics/monitoring for this first short iteration.
+- Skip user data/cloud-init.
+- Keep networking/default project settings minimal.
 
 11. Create the Droplet.
 
 12. After creation:
 
-   - The public IPv4 address appears on the Droplet page in the DigitalOcean dashboard.
-   - Copy that IP address.
-   - Default SSH user for DigitalOcean Droplets is `root`.
+- The public IPv4 address appears on the Droplet page in the DigitalOcean dashboard.
+- Copy that IP address.
+- Default SSH user for DigitalOcean Droplets is `root`.
 
 13. SSH into the Droplet from your laptop:
 
@@ -273,4 +267,3 @@ Before ending the session:
 4. Refresh the dashboard and confirm no GPU Droplets are still running.
 
 Do not merely power off the Droplet; powered-off Droplets still bill.
-

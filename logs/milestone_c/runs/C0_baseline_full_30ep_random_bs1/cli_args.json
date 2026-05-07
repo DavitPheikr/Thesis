@@ -1,0 +1,11 @@
+{
+  "config": "logs/milestone_c/configs/c0_server_full_4640_720_bs1.yml",
+  "run_name": "C0_baseline_full_30ep_random_bs1",
+  "epochs": 30,
+  "no_resume": true,
+  "seed": 42,
+  "steps_per_epoch_train": null,
+  "steps_per_epoch_valid": null,
+  "save_ckpt_freq": 1,
+  "force": false
+}
