@@ -1,0 +1,74 @@
+dataset:
+  name: PandaSetFFLane3
+  dataset_path: /home/coder/project/pandaset/PandaSet
+  cache_dir: ./logs/cache
+  use_cache: false
+  class_weights:
+  - 119562394.0
+  - 2098182.0
+  - 176504630.0
+  intensity_clip_low: 0.0
+  intensity_clip_high: 114.0
+  intensity_mean: 22.481164932250977
+  intensity_std: 14.912428855895996
+  ignored_label_inds:
+  - 0
+  test_result_folder: ./logs/test_results
+  sampler:
+    name: SemSegRandomSampler
+  split_dir: /home/coder/project/configs/splits
+  stats_file: /home/coder/project/logs/milestone_b_training_statistics.json
+  dataset_root_file: /home/coder/project/logs/dataset_root.txt
+  preflight_pattern_file: /home/coder/project/logs/milestone_b_preflight_sensor_pattern.txt
+  steps_per_epoch_train: 100
+  steps_per_epoch_valid: 50
+model:
+  name: RandLANet
+  batcher: DefaultBatcher
+  ckpt_path: null
+  num_neighbors: 16
+  num_layers: 3
+  num_points: 16384
+  num_classes: 3
+  ignored_label_inds:
+  - 0
+  sub_sampling_ratio:
+  - 4
+  - 4
+  - 4
+  in_channels: 4
+  dim_features: 8
+  dim_output:
+  - 16
+  - 64
+  - 128
+  grid_size: 0.04
+  augment:
+    recenter:
+      dim:
+      - 0
+      - 1
+pipeline:
+  name: SemanticSegmentation
+  optimizer:
+    lr: 0.001
+  batch_size: 2
+  num_workers: 0
+  val_batch_size: 2
+  test_batch_size: 1
+  max_epoch: 2
+  save_ckpt_freq: 5
+  scheduler_gamma: 0.99
+  main_log_dir: ./logs
+  train_sum_dir: train_log
+  ignored_label_inds:
+  - 0
+  device: cuda
+  split: train
+  summary:
+    record_for: []
+    max_pts: null
+    use_reference: false
+    max_outputs: 1
+  real_training_allowed: false
+  pin_memory: false
