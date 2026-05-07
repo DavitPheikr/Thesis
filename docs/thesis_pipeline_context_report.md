@@ -19,9 +19,12 @@ docs/                             # Milestone docs organized by context, milesto
 docs/context/
 docs/milestone_a/
 docs/milestone_b/
+docs/milestone_c/
 
 logs/                             # Artifacts, statistics, sanity-run reports, analysis
 logs/raw_intensity_analysis/      # Multi-stage intensity signal analysis
+logs/milestone_c/runs/            # Milestone C run artifacts, including completed C0
+logs/milestone_c/reports/         # Milestone C operational reports
 logs/milestone_b_training_statistics.json
 logs/milestone_b_sanity_train_report.txt
 
@@ -252,17 +255,19 @@ These are measured class counts from training data, not direct CE weights. Open3
 
 **Pin memory:** `false` (server benchmark showed `pin_memory=true` is slower with zero workers)
 
-**Num epochs:** official full C0 still pending; medium probes used 10 epochs
+**Num epochs:** official full C0 completed for 30 epochs.
 
 **Steps per epoch:**
 
 - Live local config contains bounded values for short local checks.
-- Official server C0 recommendation:
+- Official server C0 full run used:
   ```text
   steps_per_epoch_train: 4640
   steps_per_epoch_valid: 720
   ```
   This is approximately one sampled patch per train/validation frame per epoch with `SemSegRandomSampler`.
+
+**Official full C0 config snapshot:** [logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/config_snapshot.yml](logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/config_snapshot.yml)
 
 **Why batch size 1 remains the recommendation:**
 
@@ -344,7 +349,50 @@ augment:
 
 ### Metrics reported
 
-No official full C0 performance baseline has been reported yet, but non-smoke medium C0 evidence exists.
+The official full C0 baseline is complete. The canonical detailed report is [logs/milestone_c/reports/c0_full_baseline_results.md](logs/milestone_c/reports/c0_full_baseline_results.md).
+
+**Official full C0 run:**
+
+```text
+run: C0_baseline_full_30ep_random_bs1
+run_dir: logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/
+epochs: 30
+train/valid steps: 4640 / 720
+batch_size: 1
+val_batch_size: 1
+num_workers: 0
+pin_memory: false
+seed: 42
+wall_clock: about 41h 00m 31s
+```
+
+**Selected C0 checkpoint:** epoch 18, because it has best validation lane F1, lane IoU, and mIoU.
+
+```text
+checkpoint: logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/checkpoints/ckpt_epoch_00018.pth
+mIoU           0.703805
+road_iou       0.881990
+lane_iou       0.310355
+other_iou      0.919072
+lane_precision 0.437552
+lane_recall    0.516349
+lane_f1        0.473696
+```
+
+**Final epoch checkpoint:** epoch 30.
+
+```text
+checkpoint: logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/checkpoints/ckpt_epoch_00030.pth
+mIoU           0.683506
+road_iou       0.866600
+lane_iou       0.264658
+other_iou      0.919261
+lane_precision 0.321885
+lane_recall    0.598172
+lane_f1        0.418545
+```
+
+The final epoch has higher lane recall but lower lane precision and lower lane F1 than epoch 18. It predicts lane about `1.86x` as often as lane appears in validation (`1.487%` predicted lane vs `0.800%` true lane). Use epoch 18 as the official selected C0 checkpoint.
 
 **Sanity-run loss trajectory:** Captured in [logs/milestone_b_sanity_train_report.txt](logs/milestone_b_sanity_train_report.txt)
 
@@ -352,7 +400,7 @@ No official full C0 performance baseline has been reported yet, but non-smoke me
 
 **Server smoke evidence:** random-sampler tiny and full-model one-step runs completed training, validation, and checkpoint writing. These are readiness checks, not final performance baselines.
 
-**Medium C0 evidence:** see [logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md](logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md).
+**Medium C0 calibration evidence:** see [logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md](logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md). These runs justified the full C0 runtime settings but are not the primary C0 performance baseline.
 
 Batch-size-1 medium run:
 
@@ -404,14 +452,33 @@ pred_lane_pct  about 5.88%
 
 ### Confusion matrix and per-class breakdown
 
-**Computed for medium C0 runs, not yet for the official full C0 run.** The Milestone C validation path writes active-class confusion matrices for `road/lane/other` each epoch.
+The Milestone C validation path writes active-class confusion matrices for `road/lane/other` each epoch. Active class indexing after ignore-label filtering is:
 
-**Expected metrics (to be computed in Milestone C):**
+```text
+0 = road
+1 = lane
+2 = other
+```
 
-- mIoU (mean Intersection-over-Union)
-- Per-class IoU (separately for road, lane, other)
-- Confusion matrix (road vs lane vs other)
-- Per-class precision/recall
+Epoch 18 selected checkpoint confusion matrix:
+
+```text
+              predicted road   predicted lane   predicted other
+true road        4,696,484          44,326            42,531
+true lane           44,563          49,775             2,060
+true other         496,970          19,657         6,373,555
+```
+
+Epoch 30 final checkpoint confusion matrix:
+
+```text
+              predicted road   predicted lane   predicted other
+true road        4,380,056          88,801            45,572
+true lane           35,604          56,346             2,247
+true other         504,265          29,903         6,626,263
+```
+
+The selected checkpoint's main lane error is missed lane predicted as road. The final checkpoint finds more true lane points but also produces more false-positive lane predictions from road and other.
 
 ### Validation result logging
 
@@ -463,7 +530,7 @@ Milestone C explicitly disables resume (`ckpt_path: None`, `is_resume: false`) i
 - Loss (sanity run): 1.080 at final iteration (ratio to initial: 0.95, stable)
 - Batch-size-1 medium C0: best lane F1 `0.322776` at epoch 7; final lane F1 `0.277103` at epoch 10
 - Batch-size-2 medium C0: best lane F1 `0.311518` at epoch 4; final lane F1 `0.187700` at epoch 10, with lane over-prediction
-- Official full C0 baseline: pending
+- Official full C0 baseline: best lane F1 `0.473696` and best lane IoU `0.310355` at epoch 18; final epoch lane F1 `0.418545` and lane IoU `0.264658`
 
 ---
 
@@ -471,18 +538,18 @@ Milestone C explicitly disables resume (`ckpt_path: None`, `is_resume: false`) i
 
 ### Project-specific constraints
 
-**Milestone status:** Currently in Milestone C calibrated pre-full-C0 state
+**Milestone status:** Currently in Milestone C after completed C0 full baseline
 
 - Milestone A: complete (single-sample verification)
 - Milestone B: complete (multi-sequence validation, split frozen, sanity run passed)
-- Milestone C: training entrypoint, validation metrics, server setup, dataset transfer, class-weight verification, sampler diagnosis, random-sampler smoke tests, two 10-epoch medium C0 runs, and speed benchmarks are complete; official full C0 baseline still pending.
+- Milestone C: training entrypoint, validation metrics, server setup, dataset transfer, class-weight verification, sampler diagnosis, random-sampler smoke tests, two 10-epoch medium C0 runs, speed benchmarks, and the official 30-epoch C0 baseline are complete. C1-C4 improvement runs are still pending.
 
 **Memory/compute:**
 
 - Server GPU currently verified as `NVIDIA A100 80GB PCIe MIG 3g.40gb`.
-- OOM was observed locally at `num_points: 16384` during Day 6, but the server full-model smoke and both 10-epoch medium runs completed successfully at `num_points: 16384`.
-- Official C0 runtime settings are now calibrated: `batch_size=1`, `val_batch_size=1`, `num_workers=0`, `pin_memory=false`, `SemSegRandomSampler`, `steps_per_epoch_train=4640`, `steps_per_epoch_valid=720`.
-- Estimated official full C0 runtime is about `73min/epoch`, or `36-42h` for 30 epochs.
+- OOM was observed locally at `num_points: 16384` during Day 6, but the server full-model smoke, both 10-epoch medium runs, and the official full C0 run completed successfully at `num_points: 16384`.
+- Official C0 runtime settings are now empirically used and validated: `batch_size=1`, `val_batch_size=1`, `num_workers=0`, `pin_memory=false`, `SemSegRandomSampler`, `steps_per_epoch_train=4640`, `steps_per_epoch_valid=720`.
+- Official full C0 runtime was about `41h 00m 31s` for 30 epochs.
 - Checkpoint cadence was patched so periodic saves use human epoch numbers from `cfg.save_ckpt_freq`; do not use `steps_per_epoch_train: 1` / `steps_per_epoch_valid: 1` outside smoke tests.
 
 **Reproducibility:**
@@ -490,8 +557,12 @@ Milestone C explicitly disables resume (`ckpt_path: None`, `is_resume: false`) i
 - Frozen sequence-level train/val/test split: [configs/splits/train.txt, val.txt, test.txt](configs/splits/)
 - Measured training statistics: [logs/milestone_b_training_statistics.json](logs/milestone_b_training_statistics.json)
 - Sanity config snapshot: [logs/milestone_b_sanity_config_snapshot.yml](logs/milestone_b_sanity_config_snapshot.yml)
+- Official C0 run directory: [logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1](logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1)
+- Official C0 result report: [logs/milestone_c/reports/c0_full_baseline_results.md](logs/milestone_c/reports/c0_full_baseline_results.md)
+- Official C0 selected checkpoint: [logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/checkpoints/ckpt_epoch_00018.pth](logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/checkpoints/ckpt_epoch_00018.pth)
+- Official C0 final checkpoint: [logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/checkpoints/ckpt_epoch_00030.pth](logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/checkpoints/ckpt_epoch_00030.pth)
 
-**Real training guard:** Config includes `real_training_allowed: false` ([configs/randlanet_pandaset_ff_lane3.yml:63](configs/randlanet_pandaset_ff_lane3.yml#L63)) – a sentinel, not enforced by Open3D (can be set to true once Milestone C full training is approved)
+**Real training guard:** Local config includes `real_training_allowed: false` ([configs/randlanet_pandaset_ff_lane3.yml:63](configs/randlanet_pandaset_ff_lane3.yml#L63)) – a sentinel, not enforced by Open3D. Server run config snapshots are the authority for completed long runs.
 
 ### Code style/patterns
 
@@ -518,10 +589,9 @@ Milestone C explicitly disables resume (`ckpt_path: None`, `is_resume: false`) i
 **[logs/milestone_b_stop_conditions.txt:115–137](logs/milestone_b_stop_conditions.txt#L115-L137) – Explicit carry-forward items for Milestone C:**
 
 1. **Restore and revalidate `num_points: 16384`**
-   - Status: done for server C0 execution.
+   - Status: done for server C0 execution, including official full C0.
    - Current config uses baseline intent of 16384.
-   - Server full-model smoke and 10-epoch medium runs completed successfully at this value.
-   - Official full C0 still needs to run at this value.
+   - Server full-model smoke, 10-epoch medium runs, and the official 30-epoch C0 run completed successfully at this value.
    - File: [configs/randlanet_pandaset_ff_lane3.yml:28](configs/randlanet_pandaset_ff_lane3.yml#L28)
 
 2. **Implement lane-aware patch oversampling**
@@ -554,9 +624,11 @@ Milestone C explicitly disables resume (`ckpt_path: None`, `is_resume: false`) i
    - Status: use `open3d_native_from_measured_counts` for official C0 unless C0 collapses and a later ablation intentionally changes weights.
 
 7. **Official full C0 baseline**
-   - Status: pending.
-   - Recommended config is calibrated from medium runs: `SemSegRandomSampler`, `batch_size=1`, `val_batch_size=1`, `num_workers=0`, `pin_memory=false`, `steps_per_epoch_train=4640`, `steps_per_epoch_valid=720`, 30 epochs.
-   - Estimated runtime: about `36-42h`.
+   - Status: complete.
+   - Run: `logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/`.
+   - Completed config: `SemSegRandomSampler`, `batch_size=1`, `val_batch_size=1`, `num_workers=0`, `pin_memory=false`, `steps_per_epoch_train=4640`, `steps_per_epoch_valid=720`, 30 epochs.
+   - Runtime: about `41h 00m 31s`.
+   - Selected checkpoint: epoch 18, lane F1 `0.473696`, lane IoU `0.310355`, mIoU `0.703805`.
 
 ### Known limitations / README notes
 
@@ -567,6 +639,7 @@ Milestone C explicitly disables resume (`ckpt_path: None`, `is_resume: false`) i
 - Successful Day 6 run does NOT prove final model performance
 - Milestone C server smoke runs prove training/validation/checkpoint mechanics on the server, not final C0 quality
 - Milestone C medium runs prove the C0 baseline learns and help choose stable runtime settings, but they are not the official full C0 result
+- Official full C0 is now complete and should be used as the baseline reference for C1-C4 comparisons
 - Live YAML is NOT the historical Day 6 run record; snapshot is at [logs/milestone_b_sanity_config_snapshot.yml](logs/milestone_b_sanity_config_snapshot.yml)
 - Measured values are canonical in JSON artifacts, not YAML
 
@@ -578,11 +651,11 @@ Milestone C explicitly disables resume (`ckpt_path: None`, `is_resume: false`) i
 
 ---
 
-## Summary: Ready for Milestone C?
+## Summary: C0 Complete, Ready For C1/C2
 
-**Status:** Yes, ready for the official full C0 baseline run with `SemSegRandomSampler`.
+**Status:** The official full C0 baseline is complete. The repo is ready for the next Milestone C improvement experiment.
 
-**Use these official C0 runtime settings:**
+**Completed official C0 runtime settings:**
 
 ```text
 sampler: SemSegRandomSampler
@@ -597,7 +670,7 @@ device: cuda
 seed: 42
 ```
 
-**What has been de-risked before the full run:**
+**What has been de-risked by C0:**
 
 1. `num_points: 16384` works on the server for full-model smoke and medium runs.
 2. Open3D class weights are confirmed active in the actual CE loss.
@@ -606,6 +679,7 @@ seed: 42
 5. `pin_memory=false` is faster than pinned memory in the zero-worker setup.
 6. Batch size 1 gives better lane balance than batch size 2 in the realistic medium comparison.
 7. Checkpoints, validation JSON/CSV, confusion matrices, and stdout/training logs are written correctly.
+8. The full 30-epoch C0 baseline learns lane and provides a non-collapsed reference for ablations.
 
 **Key artifacts for downstream Claude:**
 
@@ -616,4 +690,6 @@ seed: 42
 - [logs/milestone_b_stop_conditions.txt](logs/milestone_b_stop_conditions.txt) – explicit carry-forward items
 - [logs/milestone_c/reports/c0_sampler_and_server_readiness.md](logs/milestone_c/reports/c0_sampler_and_server_readiness.md) – server readiness, sampler decision, class-weight verification
 - [logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md](logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md) – medium-run metrics and runtime-setting decision
+- [logs/milestone_c/reports/c0_full_baseline_results.md](logs/milestone_c/reports/c0_full_baseline_results.md) – official full C0 result and interpretation
+- [logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/plots/run_summary.md](logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/plots/run_summary.md) – generated C0 summary table
 - [docs/milestone_c/README.md](docs/milestone_c/README.md) – concise Milestone C orientation

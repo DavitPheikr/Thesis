@@ -2,6 +2,8 @@
 
 Generated: 2026-05-05
 
+Post-run note, 2026-05-07: the official full C0 run used this policy unchanged. C0 completed as `logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/`; selected checkpoint epoch 18 reached lane IoU `0.310355`, lane F1 `0.473696`, and mIoU `0.703805`.
+
 ## Decision
 
 Milestone C C0 keeps the Open3D-native measured-count class-weight policy:

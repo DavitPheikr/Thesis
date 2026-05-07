@@ -1,5 +1,7 @@
 # Split Audit
 
+Historical note, 2026-05-07: this strict split-audit schema verdict remains a documentation gap, but it did not block the official C0 baseline run. C0 uses the frozen Milestone B train/val/test split and completed as `logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/`. The missing complete per-sequence class-count table for val/test should still be fixed before making a strict ACCEPTABLE/BORDERLINE/NEEDS_REBUILD split-quality claim.
+
 ## Headline Verdict
 
 **BLOCKED_SCHEMA**

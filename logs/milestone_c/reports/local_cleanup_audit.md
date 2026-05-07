@@ -2,11 +2,13 @@
 
 Generated: 2026-05-04
 
+Historical note, 2026-05-07: this audit predates the completed Milestone C medium runs and official full C0 run. The old run-free state reported below is no longer current. The completed official C0 run is `logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/`; see `logs/milestone_c/reports/c0_full_baseline_results.md`.
+
 ## 1. Audit Findings
 
 ### Milestone C Run Folders
 
-`logs/milestone_c/runs/` is empty.
+At the time of this audit, `logs/milestone_c/runs/` was empty. This is no longer current after the C0 medium and full runs.
 
 | Folder | Status | end_time.txt | training_log.txt | Size | Notes |
 |---|---|---:|---:|---:|---|
@@ -141,7 +143,7 @@ Recommended default: leave these alone until the project is pushed to GitHub or 
 
 ### After
 
-- `logs/milestone_c/runs/` is empty and ready for real C0 runs.
+- Historical state at audit time: `logs/milestone_c/runs/` was empty and ready for real C0 runs. Current state: it contains completed C0 artifacts.
 - `logs/milestone_c/configs/` is empty; no dead smoke configs remain.
 - Active checkpoint risk is cleared: all `.pth` files are archived under `logs/milestone_b_archive/`.
 - Only `requirements_working_panda.txt` remains as the environment source of truth.

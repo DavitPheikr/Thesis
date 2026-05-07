@@ -408,6 +408,86 @@ run_summary.md
 
 These artifacts are intended for both immediate debugging and thesis writing.
 
+## Official Full C0 Result: 2026-05-07
+
+The recommended setting above was used for the official 30-epoch C0 run.
+
+```text
+run_name: C0_baseline_full_30ep_random_bs1
+run_dir: logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/
+epochs: 30
+steps_per_epoch_train: 4640
+steps_per_epoch_valid: 720
+batch_size: 1
+val_batch_size: 1
+num_workers: 0
+pin_memory: false
+device: cuda
+seed: 42
+wall_clock: about 41h 00m 31s
+```
+
+Artifact counts are complete:
+
+```text
+eval_history.csv lines: 31 including header
+eval_epoch_*.json: 30
+confusion_epoch_*.npy: 30
+checkpoints/ckpt_epoch_*.pth: 30
+```
+
+The detailed full-run report is:
+
+```text
+logs/milestone_c/reports/c0_full_baseline_results.md
+```
+
+### Full C0 Headline Result
+
+| metric | first epoch | final epoch | best epoch | best value |
+| --- | ---: | ---: | ---: | ---: |
+| train_loss | 0.433675 | 0.113191 | 30 | 0.113191 |
+| val_loss | 0.461187 | 0.271130 | 20 | 0.243199 |
+| mIoU | 0.613929 | 0.683506 | 18 | 0.703805 |
+| lane_iou | 0.187062 | 0.264658 | 18 | 0.310355 |
+| lane_f1 | 0.315167 | 0.418545 | 18 | 0.473696 |
+
+Selected checkpoint:
+
+```text
+logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/checkpoints/ckpt_epoch_00018.pth
+```
+
+Final checkpoint:
+
+```text
+logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/checkpoints/ckpt_epoch_00030.pth
+```
+
+### Full C0 Interpretation
+
+The full C0 run confirms that the baseline learns lane and does not collapse to road/other. Epoch 18 is the selected checkpoint because it has the best validation lane F1, lane IoU, and mIoU.
+
+Epoch 18 lane metrics:
+
+```text
+lane_iou       0.310355
+lane_precision 0.437552
+lane_recall    0.516349
+lane_f1        0.473696
+```
+
+Epoch 30 lane metrics:
+
+```text
+lane_iou       0.264658
+lane_precision 0.321885
+lane_recall    0.598172
+lane_f1        0.418545
+```
+
+The final epoch finds more true lane points, but it predicts lane too often. At epoch 30, lane is `0.800%` of validation support but `1.487%` of predictions. This explains the higher recall and lower precision. Future C1-C4 comparisons should use epoch 18 as the selected C0 baseline and should compare lane IoU, lane precision, lane recall, lane F1, predicted lane share, and confusion matrices rather than mIoU alone.
+
 ## Methodology Notes For Thesis
 
 The C0 baseline is now well defined:
@@ -420,6 +500,7 @@ measured-count Open3D class weighting, batch size 1, and zero-worker loading.
 The most important observed behavior is:
 
 - The baseline learns lane, so the pipeline is valid.
+- The official full-run selected checkpoint is epoch 18, with lane IoU `0.310355` and lane F1 `0.473696`.
 - Lane remains the limiting class, so later C1/C2/C3 improvements have meaningful room.
 - Batch size 2 improves val loss and recall but hurts lane precision/F1 by over-predicting lane.
 - Workers would be an engineering optimization, not a thesis-method requirement, and are currently unstable.

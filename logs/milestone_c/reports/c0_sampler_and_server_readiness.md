@@ -4,7 +4,7 @@ Generated: 2026-05-05
 
 ## Decision
 
-Milestone C C0 baseline will use:
+Milestone C C0 baseline uses:
 
 ```yaml
 dataset:
@@ -307,7 +307,8 @@ This is cleaner than trying to make Open3D's generic spatial sampler the samplin
 
 ## Current Risks Before Long C0
 
-- Server-generated configs under `logs/milestone_c/configs/` may still contain smoke values such as `steps_per_epoch_train: 1` and `steps_per_epoch_valid: 1`; do not use those unchanged for a real C0 run.
+- Historical note: this section was written before the official full C0 run. The full C0 baseline has now completed as `logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/`.
+- Server-generated configs under `logs/milestone_c/configs/` may still contain smoke values such as `steps_per_epoch_train: 1` and `steps_per_epoch_valid: 1`; do not use those unchanged for future real runs.
 - Full validation with `steps_per_epoch_valid: 720` gives one sampled patch per validation frame, not exhaustive all-point validation.
 - Random validation has sampling noise. Use enough validation steps to make curves meaningful.
 - Checkpoint save cadence has been patched locally after this report's sampler diagnosis: `save_ckpt()` now uses `cfg.save_ckpt_freq` on human epoch numbers and saves the final requested epoch.
@@ -354,6 +355,35 @@ Estimated full C0 runtime:
 ```text
 about 73 minutes per epoch
 about 36-42 hours for 30 epochs
+```
+
+## Official Full C0 Completion Update
+
+The official 30-epoch C0 baseline later completed using the recommended random-sampler configuration.
+
+```text
+run_name: C0_baseline_full_30ep_random_bs1
+run_dir: logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/
+runtime: about 41h 00m 31s
+selected_checkpoint: checkpoints/ckpt_epoch_00018.pth
+final_checkpoint: checkpoints/ckpt_epoch_00030.pth
+```
+
+Headline selected-checkpoint metrics:
+
+```text
+epoch: 18
+mIoU: 0.703805
+lane_iou: 0.310355
+lane_precision: 0.437552
+lane_recall: 0.516349
+lane_f1: 0.473696
+```
+
+Detailed report:
+
+```text
+logs/milestone_c/reports/c0_full_baseline_results.md
 ```
 
 ## Historical Recommended Next Run Config Direction

@@ -2,6 +2,8 @@
 
 Generated: 2026-05-04
 
+Post-run note, 2026-05-07: this metric plumbing was exercised by the official full C0 run `logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/`. The run produced 30 rows of per-epoch metrics, 30 per-epoch JSON snapshots, 30 confusion matrices, final plots, and a selected best-lane-F1 checkpoint at epoch 18. See `logs/milestone_c/reports/c0_full_baseline_results.md`.
+
 ## 1. Approach Chosen
 
 Chosen integration strategy: **B. Override the validation/training loop in the existing `MilestoneCPipeline` subclass.**
@@ -143,4 +145,3 @@ Future Milestone C training runs can now produce thesis-relevant validation arti
 ## 10. Recommended Next Session
 
 Run a tiny GPU-backed C0 smoke on DigitalOcean with validation enabled, then inspect the first `eval_history.csv` and `confusion_epoch_001.npy` before launching the long baseline.
-

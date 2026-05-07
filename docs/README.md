@@ -7,4 +7,4 @@
 - `milestone_b/`
   Reserved for Milestone B planning and execution documents.
 - `milestone_c/`
-  Current Milestone C notes, including C0 sampler/server readiness, medium-run results, speed benchmarks, and links to active reports.
+  Current Milestone C notes, including C0 sampler/server readiness, medium-run results, speed benchmarks, the completed full C0 baseline, and links to active reports.

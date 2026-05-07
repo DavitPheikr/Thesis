@@ -1,5 +1,55 @@
 # PROGRESS_LOG
 
+## Milestone C C0 Full Baseline Completed - 2026-05-07
+
+**What this update did**: recorded the completed official full C0 baseline run, preserved all run artifacts/checkpoints, and selected the validation-best C0 checkpoint.
+
+**Facts confirmed**:
+- `C0_baseline_full_30ep_random_bs1` completed 30 epochs on the server in about `41h 00m 31s`.
+- Run directory:
+  ```text
+  logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/
+  ```
+- The run used `SemSegRandomSampler`, `num_points=16384`, `steps_per_epoch_train=4640`, `steps_per_epoch_valid=720`, `batch_size=1`, `val_batch_size=1`, `num_workers=0`, `pin_memory=false`, `device=cuda`, and seed `42`.
+- Artifact counts are complete:
+  ```text
+  eval_history.csv lines: 31 including header
+  eval_epoch_*.json: 30
+  confusion_epoch_*.npy: 30
+  checkpoints/ckpt_epoch_*.pth: 30
+  ```
+- Artifact SHA checks and checkpoint SHA checks passed locally after pulling from GitHub.
+- Best validation checkpoint is epoch 18:
+  ```text
+  checkpoint      ckpt_epoch_00018.pth
+  mIoU            0.703805
+  lane_iou        0.310355
+  lane_precision  0.437552
+  lane_recall     0.516349
+  lane_f1         0.473696
+  ```
+- Final epoch 30 result:
+  ```text
+  checkpoint      ckpt_epoch_00030.pth
+  mIoU            0.683506
+  lane_iou        0.264658
+  lane_precision  0.321885
+  lane_recall     0.598172
+  lane_f1         0.418545
+  ```
+- Epoch 30 predicts lane about `1.86x` as often as lane appears in validation (`1.487%` predicted lane vs `0.800%` true lane), so final-epoch behavior has higher recall but lower precision than epoch 18.
+
+**Decision**:
+- Use `ckpt_epoch_00018.pth` as the selected official C0 checkpoint for reporting and qualitative analysis.
+- Keep `ckpt_epoch_00030.pth` as the final-training checkpoint for comparison.
+- Compare future C1-C4 runs against the epoch-18 selected C0 result, not against the final epoch alone.
+
+**New/updated reports**:
+- `logs/milestone_c/reports/c0_full_baseline_results.md`
+- `docs/milestone_c/README.md`
+- `docs/thesis_pipeline_context_report.md`
+- `README.md`
+
 ## Milestone C C0 Medium Runs And Speed Calibration - 2026-05-05
 
 **What this update did**: recorded the first non-smoke C0 medium runs and training-system benchmarks, then selected the official full C0 runtime settings.

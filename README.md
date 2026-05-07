@@ -50,6 +50,8 @@ High-level status:
   - server smoke tests completed for both tiny and full-model random-sampler configs
   - 10-epoch medium C0 runs completed for batch size 1 and batch size 2
   - batch size 1 gave the best lane balance and is the official full C0 recommendation
+  - official full 30-epoch C0 baseline completed as `C0_baseline_full_30ep_random_bs1`
+  - selected C0 checkpoint is epoch 18 by validation lane F1 and lane IoU
   - DataLoader workers are currently unsafe on the server; `num_workers > 0` segfaulted
   - `SemSegSpatiallyRegularSampler` was benchmarked and deferred because it eagerly preprocesses the full split before epoch 1
   - the live config has `model.num_points: 16384` restored
@@ -59,7 +61,7 @@ Important boundary:
 
 - This repository has completed a **mechanical sanity pass**, not a final experiment campaign.
 - No performance claims should be inferred from the Milestone B sanity run.
-- Milestone C has completed server readiness, random-sampler smoke tests, and medium C0 calibration runs, but has not yet produced the official full C0 baseline.
+- Milestone C has completed server readiness, random-sampler smoke tests, medium C0 calibration runs, and the official full C0 baseline. Further C1-C4 improvement runs are still pending.
 
 ## Repository Structure
 
@@ -203,6 +205,8 @@ If you are new to the repo, these are the most important documents:
   - server setup, dataset checks, spatial sampler bottleneck benchmark, random-sampler smoke results, and C0 sampler decision
 - [C0 medium runs and speed benchmarks](logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md)
   - 10-epoch medium-run metrics, batch-size comparison, DataLoader worker failures, pin-memory benchmarks, post-run plotting workflow, and official C0 runtime recommendation
+- [C0 full baseline results](logs/milestone_c/reports/c0_full_baseline_results.md)
+  - official 30-epoch C0 result, artifact inventory, selected checkpoint, epoch-18/epoch-30 metrics, confusion matrices, plot guide, and interpretation
 - [Class weight decision](logs/milestone_c/reports/class_weight_decision.md)
   - Open3D-native class-weight policy and server loss verification
 
@@ -243,12 +247,28 @@ The repo should currently be interpreted as follows:
   - server-generated configs should override local paths and use non-smoke step counts for long runs
   - bounded epoch/step settings in the live config are not the official full-run counts
 
-Milestone C therefore starts from a repo that is:
+Official C0 result:
+
+- Run directory: `logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/`
+- Exact run config: `logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/config_snapshot.yml`
+- Canonical summary: `logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/plots/run_summary.md`
+- Detailed report: `logs/milestone_c/reports/c0_full_baseline_results.md`
+- Best checkpoint: `checkpoints/ckpt_epoch_00018.pth`
+- Final checkpoint: `checkpoints/ckpt_epoch_00030.pth`
+- Best validation lane F1: `0.473696` at epoch 18
+- Best validation lane IoU: `0.310355` at epoch 18
+- Final epoch lane F1: `0.418545`
+- Final epoch lane IoU: `0.264658`
+
+Milestone C therefore continues from a repo that is:
 
 - mechanically training-capable
 - explicitly measured and documented
 - still carrying forward open questions such as:
-  - completing the official full C0 baseline
+  - C1 engineered features
+  - C2 lane-aware sampling
+  - C3 features plus sampling
+  - C4 conservative augmentation
   - oversampling strategy
   - class-weight policy refinement
   - Day 6 reporting cleanup

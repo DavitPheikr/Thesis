@@ -1,6 +1,6 @@
 # Milestone C Option A Execution Plan
 
-Conservative end-to-end plan for moving from the current Milestone C server-readiness state to a defensible thesis result.
+Conservative end-to-end plan for moving from the current Milestone C post-C0 state to a defensible thesis result.
 
 This plan follows **Option A**: stabilize a real RandLA-Net baseline first, then add low-risk dataset/input improvements that are directly motivated by the raw intensity analysis. It avoids architecture surgery, custom multi-head models, Lovasz loss, PCA geometry features, or other reach items until the simple path has produced a trustworthy baseline and ablation table.
 
@@ -31,10 +31,14 @@ These are the facts we should treat as the starting line.
 - `SemSegSpatiallyRegularSampler` was benchmarked and deferred because it eagerly preprocesses all split frames before epoch 1. The measured estimate was about `1.30h` for training sampler initialization plus about `12min` for validation initialization.
 - Class-weighted CE was verified live on the server. Effective CE weights are `road=2.3753`, `lane=36.9864`, `other=1.6341`.
 - Random-sampler GPU smoke tests completed for both tiny and full-model configs, including validation and checkpoint writing.
-- C0 medium-run evidence now exists. A 10-epoch batch-size-1 medium run learned successfully and produced the best lane balance observed so far.
+- C0 medium-run evidence exists. A 10-epoch batch-size-1 medium run learned successfully and produced the best lane balance among medium probes.
 - Batch-size-2 was tested with a matching 10-epoch medium run. It completed and learned, but was slower in the realistic run and over-predicted lane by epoch 10.
 - Runtime benchmarks showed `num_workers > 0` is unstable on the current server because DataLoader workers segfault. `pin_memory=true` was slower in the zero-worker setting.
-- Official C0 full-run settings should be `batch_size=1`, `val_batch_size=1`, `num_workers=0`, `pin_memory=false`, `steps_per_epoch_train=4640`, and `steps_per_epoch_valid=720`.
+- Official C0 full-run settings were `batch_size=1`, `val_batch_size=1`, `num_workers=0`, `pin_memory=false`, `steps_per_epoch_train=4640`, and `steps_per_epoch_valid=720`.
+- Official full C0 completed as `C0_baseline_full_30ep_random_bs1` under `logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/`.
+- The selected C0 checkpoint is epoch 18: lane IoU `0.310355`, lane precision `0.437552`, lane recall `0.516349`, lane F1 `0.473696`, mIoU `0.703805`.
+- The final epoch 30 checkpoint has lane IoU `0.264658`, lane precision `0.321885`, lane recall `0.598172`, lane F1 `0.418545`, and mIoU `0.683506`.
+- Epoch 30 over-predicts lane relative to validation support (`1.487%` predicted lane vs `0.800%` true lane), so future comparisons should use epoch 18 as the selected C0 baseline.
 
 Primary references:
 
@@ -47,6 +51,8 @@ Primary references:
 - `logs/raw_intensity_analysis/reports/final/plots.md`
 - `logs/milestone_c/reports/c0_sampler_and_server_readiness.md`
 - `logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md`
+- `logs/milestone_c/reports/c0_full_baseline_results.md`
+- `logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/plots/run_summary.md`
 
 ---
 
@@ -248,7 +254,7 @@ The command shape should eventually look like:
 ```bash
 ./panda/bin/python -u tools/train_milestone_c.py \
   --config configs/randlanet_pandaset_ff_lane3.yml \
-  --run-name C0_baseline \
+  --run-name C0_baseline_full_30ep_random_bs1 \
   --epochs 30 \
   --no-resume
 ```
@@ -262,7 +268,7 @@ Current status:
 
 - Done on server for random-sampler smoke runs.
 - Done for `C0_baseline_medium_10ep_random` and `C0_baseline_medium_10ep_random_bs2`.
-- The official full C0 run is still pending.
+- Done for the official full C0 run `C0_baseline_full_30ep_random_bs1`.
 
 ### 6.2 Add full validation metrics
 
@@ -283,15 +289,15 @@ Save these metrics every epoch:
 Minimum files:
 
 ```text
-logs/milestone_c/runs/C0_baseline/eval_history.csv
-logs/milestone_c/runs/C0_baseline/eval_epoch_001.json
-logs/milestone_c/runs/C0_baseline/confusion_epoch_001.npy
+logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/eval_history.csv
+logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/eval_epoch_001.json
+logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/confusion_epoch_001.npy
 ```
 
 After the run, generate human-readable plots and a compact report:
 
 ```bash
-./panda/bin/python tools/plot_milestone_c_run.py --run-name C0_baseline
+./panda/bin/python tools/plot_milestone_c_run.py --run-name C0_baseline_full_30ep_random_bs1
 ```
 
 Expected plot/report outputs:
@@ -317,6 +323,14 @@ Current status:
 
 - Implemented in `tools/train_milestone_c.py`.
 - Verified through 10-epoch medium runs.
+- Verified through the official 30-epoch C0 run.
+- Official C0 selected checkpoint values:
+  ```text
+  epoch 18
+  mIoU       0.703805
+  lane_iou   0.310355
+  lane_f1    0.473696
+  ```
 - Batch-size-1 medium run final values:
   ```text
   train_loss 0.339711
@@ -337,7 +351,7 @@ Current status:
 
 Definition of done:
 
-- One short run produces all metrics above.
+- Completed for C0: the full run produced all metrics above for 30 epochs.
 - The confusion matrix can be inspected and matches the three active classes.
 
 ### 6.3 Revalidate `num_points: 16384` on the server
@@ -354,7 +368,7 @@ Status:
 - Done for the current A100 MIG server.
 - Full-model random-sampler smoke runs completed at `16384`.
 - Both 10-epoch medium C0 runs completed at `16384`.
-- Official full C0 should therefore keep `num_points: 16384`.
+- Official full C0 completed at `16384`.
 
 If `16384` unexpectedly OOMs during the official full run, test concessions in this order:
 
@@ -372,7 +386,7 @@ Important:
 
 Definition of done:
 
-- Server smoke and medium runs complete at `num_points: 16384`, or a concession is documented.
+- Server smoke, medium runs, and official full C0 complete at `num_points: 16384`, or a concession is documented for future runs if this changes.
 - Peak memory is logged.
 - The chosen `num_points` is justified in `logs/milestone_c/reports/c0_medium_runs_and_speed_benchmarks.md`.
 
@@ -416,13 +430,13 @@ Sampler rationale:
 - The spatial sampler is class-blind and does not directly address the rare lane class.
 - The thesis sampling contribution remains C2 lane-aware patch sampling.
 
-Before launching a long C0:
+Historical launch checklist for long C0:
 
 - Create or inspect a server config that uses the server dataset path and `SemSegRandomSampler`.
 - Ensure it is not a smoke config with `steps_per_epoch_train: 1` and `steps_per_epoch_valid: 1`.
 - Use the calibrated official C0 settings: `steps_per_epoch_train: 4640`, `steps_per_epoch_valid: 720`, `batch_size: 1`, `val_batch_size: 1`, `num_workers: 0`, `pin_memory: false`.
 - Pass `--save-ckpt-freq 1` for the official full run so the exact best validation epoch is available for later analysis and qualitative visualization.
-- Run detached and expect about `36-42h` for 30 epochs on the current server.
+- Run detached and expect about `36-42h` for 30 epochs on the current server. The completed official run took about `41h 00m 31s`.
 
 Suggested run:
 
@@ -430,12 +444,34 @@ Suggested run:
 - Evaluate every epoch and inspect the validation IoU curves.
 - If validation lane IoU and mIoU are still climbing at epoch 30, run longer.
 - If the curves plateau earlier, future ablation runs can be shortened with that evidence.
-- The 2-epoch pilot and 10-epoch medium stages are already complete; the next C0 step is the official full run.
+- The 2-epoch pilot, 10-epoch medium stages, and official 30-epoch C0 run are complete.
+
+Completed C0 result:
+
+```text
+run_name: C0_baseline_full_30ep_random_bs1
+selected_epoch: 18
+selected_checkpoint: checkpoints/ckpt_epoch_00018.pth
+mIoU: 0.703805
+lane_iou: 0.310355
+lane_precision: 0.437552
+lane_recall: 0.516349
+lane_f1: 0.473696
+```
+
+Final epoch 30 is kept for comparison, but it is not the selected checkpoint because lane precision and F1 degrade:
+
+```text
+lane_iou: 0.264658
+lane_precision: 0.321885
+lane_recall: 0.598172
+lane_f1: 0.418545
+```
 
 Definition of done:
 
-- C0 produces full validation metrics.
-- You can state baseline `lane IoU`, `lane precision`, `lane recall`, and `mIoU`.
+- Done. C0 produced full validation metrics, confusion matrices, plots, run summary, and 30 checkpoints.
+- Baseline `lane IoU`, `lane precision`, `lane recall`, `lane F1`, and `mIoU` are stated above and in `logs/milestone_c/reports/c0_full_baseline_results.md`.
 
 ---
 
@@ -1033,7 +1069,7 @@ Those are good reach ideas, but only after the conservative pipeline is stable.
 
 ### Week 1: baseline and evaluation
 
-Do:
+Done:
 
 - Clean experiment setup.
 - Set up DigitalOcean GPU Droplet environment and verify one-sample dataset loading.
@@ -1044,7 +1080,7 @@ Do:
 
 End state:
 
-- First real full-size lane IoU, lane precision, lane recall, confusion matrix.
+- First real full-size lane IoU, lane precision, lane recall, and confusion matrix exist. The selected C0 checkpoint is epoch 18.
 
 ### Week 2: features
 
@@ -1238,7 +1274,7 @@ Do not:
 
 Minimum final artifacts:
 
-- `logs/milestone_c/runs/C0_baseline/eval_history.csv`
+- `logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/eval_history.csv`
 - `logs/milestone_c/runs/C1_features/eval_history.csv`
 - `logs/milestone_c/runs/C2_sampling/eval_history.csv`
 - `logs/milestone_c/runs/C3_features_sampling/eval_history.csv`
@@ -1255,7 +1291,7 @@ Minimum thesis table:
 
 | Run | mIoU | Road IoU | Lane IoU | Other IoU | Lane Precision | Lane Recall | Lane F1 |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| C0 baseline | | | | | | | |
+| C0 baseline selected epoch 18 | 0.703805 | 0.881990 | 0.310355 | 0.919072 | 0.437552 | 0.516349 | 0.473696 |
 | C1 features | | | | | | | |
 | C2 sampling | | | | | | | |
 | C3 features + sampling | | | | | | | |
@@ -1267,15 +1303,15 @@ Minimum thesis table:
 
 Do these next, in this order:
 
-1. Create `logs/milestone_c/` run structure.
-2. Set up DigitalOcean GPU Droplet and run a one-sample dataset/model smoke test there.
-3. Create or adapt a Milestone C training script separate from the Day 6 sanity script.
-4. Add validation metric logging: mIoU, per-class IoU, precision/recall/F1, confusion matrix.
-5. Run a short DigitalOcean baseline at `num_points: 16384` and log memory.
-6. Run C0 baseline long enough to get the first real lane IoU.
-7. Only after that, build the feature cache and run C1.
+1. Treat `logs/milestone_c/runs/C0_baseline_full_30ep_random_bs1/` as the fixed C0 baseline artifact set.
+2. Use `ckpt_epoch_00018.pth` as the selected C0 checkpoint for reporting and qualitative comparison.
+3. Write a short tracked C0 result summary if a shorter report is needed in addition to `logs/milestone_c/reports/c0_full_baseline_results.md`.
+4. Design C1 engineered features using only geometry/intensity inputs and train-split statistics.
+5. Build or validate the feature cache.
+6. Run a short C1 smoke/medium check with the same validation artifact path.
+7. Run the full C1 feature experiment only after the smoke/medium check confirms feature alignment and metric logging.
 
-The key discipline is: **baseline first, then improvements**. Without the baseline, we cannot prove that the intensity work, sampling work, or augmentations helped.
+The key discipline remains: **baseline first, then improvements**. C0 is now the baseline, so future changes must compare directly against the selected epoch-18 C0 result.
 
 ---
 
