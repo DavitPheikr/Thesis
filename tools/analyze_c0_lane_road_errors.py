@@ -69,6 +69,16 @@ DISTANCE_BUCKETS = (
     (60.0, np.inf, "60m_plus"),
 )
 
+REPO_LOCAL_DATASET_PATHS = {
+    "dataset_path": "pandaset/PandaSet",
+    "split_dir": "configs/splits",
+    "stats_file": "logs/milestone_b_training_statistics.json",
+    "dataset_root_file": "logs/dataset_root.txt",
+    "preflight_pattern_file": "logs/milestone_b_preflight_sensor_pattern.txt",
+    "cache_dir": "logs/cache",
+    "test_result_folder": "logs/test_results",
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -108,8 +118,28 @@ def choose_device(name: str) -> torch.device:
     return torch.device(name)
 
 
+def repo_local_path(value: str | None, fallback_relative: str) -> str:
+    """Resolve config paths against the current repo instead of one machine."""
+    fallback = PROJECT_ROOT / fallback_relative
+    if value is None:
+        return str(fallback)
+
+    path = Path(value)
+    if path.is_absolute():
+        return str(path) if path.exists() else str(fallback)
+
+    return str((PROJECT_ROOT / path).resolve())
+
+
+def normalize_dataset_paths(cfg: dict) -> None:
+    dataset_cfg = cfg["dataset"]
+    for key, fallback_relative in REPO_LOCAL_DATASET_PATHS.items():
+        dataset_cfg[key] = repo_local_path(dataset_cfg.get(key), fallback_relative)
+
+
 def load_cfg(path: Path, steps: int) -> dict:
     cfg = yaml.safe_load(path.read_text())
+    normalize_dataset_paths(cfg)
     cfg["dataset"]["sampler"] = {"name": "SemSegRandomSampler"}
     if "validation" in cfg["dataset"]:
         raise RuntimeError("Unexpected nested validation dataset config")
