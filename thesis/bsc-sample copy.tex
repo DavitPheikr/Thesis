@@ -1,0 +1,144 @@
+\documentclass[a4paper,11pt,oneside]{article}
+
+% To use this template, you have to have a halfway complete LaTeX
+% installation and you have to run pdflatex, followed by bibtex,
+% following by one-two more pdflatex runs.
+%
+% Note thad usimg a spel chequer (e.g. ispell, aspell) is generolz
+% a very guud ideo.
+
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper,top=3cm,bottom=3cm,left=3cm,right=3cm]{geometry}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{helvet}
+\usepackage[english]{babel}     %% typographie française
+\usepackage[style=numeric,language=english]{biblatex}
+\usepackage{parskip}		%% blank lines between paragraphs, no indent
+\usepackage[margin=1cm]{caption}%% give long captions a margin
+\usepackage{booktabs}           %% typesetting nice tables
+\usepackage[cache=false]{minted}%% typesetting code nicely
+\usepackage[pdftex]{graphicx}	%% include graphics, preferrably pdf
+\usepackage[pdftex]{hyperref}	%% many PDF options can be set here
+\pdfadjustspacing=1		%% force LaTeX-like character spacing
+
+\newcommand{\mylastname}{Pheikrishvili}
+\newcommand{\myfirstname}{Davit}
+\newcommand{\mynumber}{30007292}
+\newcommand{\myname}{\myfirstname{} \mylastname{}}
+\newcommand{\mytitle}{LiDAR-Based Lane Marking Segmentation in Urban Point Clouds Using RandLA-Net}
+\newcommand{\mysupervisor}{Prof. Dmitry Kropotov}
+
+\hypersetup{
+  pdfauthor = {\myname},
+  pdftitle = {\mytitle},
+  pdfkeywords = {},
+  colorlinks = {true},
+  linkcolor = {blue}
+}
+
+\addbibresource{bsc-sample.bib}
+
+\begin{document}
+\pagenumbering{roman}
+
+\thispagestyle{empty}
+
+\begin{flushright}
+  \includegraphics[scale=0.8]{bsc-logo}
+\end{flushright}
+\vspace*{40mm}
+\begin{center}
+  \huge
+  \textbf{\mytitle}
+\end{center}
+\vspace*{4mm}
+\begin{center}
+  \Large by
+\end{center}
+\vspace*{4mm}
+\begin{center}
+  \LARGE
+  \textbf{\myname}
+\end{center}
+\vspace*{20mm}
+\begin{center}
+  \Large
+  Bachelor Thesis \\[2ex]
+  Computer Science
+\end{center}
+\vfill
+\begin{flushleft}
+  \large
+  Submission: \today \hfill Supervisor: \mysupervisor \\
+  \rule{\textwidth}{1pt}
+\end{flushleft}
+\begin{center}
+  School of Computer Science and Engineering, Constructor University
+\end{center}
+
+\newpage
+\thispagestyle{empty}
+
+\begin{center}
+  \Large \textbf{Statutory Declaration}
+  \vspace*{8mm}
+\end{center}
+
+\begin{center}
+  \begin{tabular}{|l|p{85mm}|}
+    \hline
+    Family Name, Given/First Name & \mylastname, \myfirstname \\
+    Matriculation number          & \mynumber                 \\
+    Kind of thesis submitted      & Bachelor Thesis           \\
+    \hline
+  \end{tabular}
+  \vspace*{8mm}
+\end{center}
+
+\subsection*{English: Declaration of Authorship}
+
+I hereby declare that the thesis submitted was created and written
+solely by myself without any external support. Any sources, direct
+or indirect, are marked as such. I am aware of the fact that the
+contents of the thesis in digital form may be revised with regard to
+usage of unauthorized aid as well as whether the whole or parts of
+it may be identified as plagiarism. I do agree my work to be entered
+into a database for it to be compared with existing sources, where
+it will remain in order to enable further comparisons with future
+theses. This does not grant any rights of reproduction and usage,
+however.
+
+This document was neither presented to any other examination board
+nor has it been published.
+
+\subsection*{German: Erklärung der Autorenschaft (Urheberschaft)}
+
+Ich erkläre hiermit, dass die vorliegende Arbeit ohne fremde Hilfe
+ausschließlich von mir erstellt und geschrieben worden ist. Jedwede
+verwendeten Quellen, direkter oder indirekter Art, sind als solche
+kenntlich gemacht worden. Mir ist die Tatsache bewusst, dass der
+Inhalt der Thesis in digitaler Form geprüft werden kann im Hinblick
+darauf, ob es sich ganz oder in Teilen um ein Plagiat handelt. Ich
+bin damit einverstanden, dass meine Arbeit in einer Datenbank
+eingegeben werden kann, um mit bereits bestehenden Quellen
+verglichen zu werden und dort auch verbleibt, um mit zukünftigen
+Arbeiten verglichen werden zu können. Dies berechtigt jedoch nicht
+zur Verwendung oder Vervielfältigung.
+
+Diese Arbeit wurde noch keiner anderen Prüfungsbehörde vorgelegt
+noch wurde sie bisher veröffentlicht.
+
+\vspace{20mm}
+
+\dotfill\\
+Date, Signature
+
+\newpage
+
+\section*{Abstract}
+
+This thesis examines the problem of lane-marking segmentation from LiDAR data by framing it as a simplified point-cloud semantic segmentation task. It focuses on the design of a structured and reproducible experimental pipeline, including data preparation, representation, and baseline model configuration. A reduced label space and a standard segmentation architecture are used to establish a clear and controlled reference setting, with particular attention to challenges such as class imbalance and sparse target features. Rather than proposing a novel method, the work aims to provide a stable foundation for analyzing the capability of LiDAR-based approaches to capture lane-related structure in complex driving scenes, supporting subsequent evaluation and refinement.
+\newpage
+
+
+\end{document}
