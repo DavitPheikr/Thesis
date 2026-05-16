@@ -194,6 +194,13 @@ def summarize_values(values: np.ndarray) -> dict[str, float | int | None]:
     }
 
 
+def percentile_or_none(values: np.ndarray, percentile: float) -> float | None:
+    values = np.asarray(values)
+    if values.size == 0:
+        return None
+    return float(np.percentile(values, percentile))
+
+
 def write_csv(path: Path, rows: list[dict]) -> None:
     if not rows:
         path.write_text("")
@@ -242,11 +249,13 @@ def empty_bucket_stats() -> dict[str, dict]:
             "lane_to_road": 0,
             "lane_to_other": 0,
             "road_total": 0,
+            "road_tp": 0,
             "road_to_lane": 0,
             "other_total": 0,
             "other_to_lane": 0,
             "lane_tp_intensity": [],
             "lane_to_road_intensity": [],
+            "road_tp_intensity": [],
         }
         for lo, hi, label in DISTANCE_BUCKETS
     }
@@ -260,6 +269,7 @@ def bucket_rows_from_stats(bucket_stats: dict[str, dict]) -> list[dict]:
         lane_to_road = stats["lane_to_road"]
         true_lane = stats["true_lane"]
         road_total = stats["road_total"]
+        road_tp = stats["road_tp"]
         other_total = stats["other_total"]
         lane_tp_intensity = (
             np.concatenate(stats["lane_tp_intensity"])
@@ -269,6 +279,11 @@ def bucket_rows_from_stats(bucket_stats: dict[str, dict]) -> list[dict]:
         lane_to_road_intensity = (
             np.concatenate(stats["lane_to_road_intensity"])
             if stats["lane_to_road_intensity"]
+            else np.asarray([], dtype=np.float32)
+        )
+        road_tp_intensity = (
+            np.concatenate(stats["road_tp_intensity"])
+            if stats["road_tp_intensity"]
             else np.asarray([], dtype=np.float32)
         )
         rows.append(
@@ -284,17 +299,21 @@ def bucket_rows_from_stats(bucket_stats: dict[str, dict]) -> list[dict]:
                 "lane_recall": None if true_lane == 0 else lane_tp / true_lane,
                 "lane_to_road_rate": None if true_lane == 0 else lane_to_road / true_lane,
                 "road_total": road_total,
+                "road_tp": road_tp,
                 "road_to_lane": stats["road_to_lane"],
                 "road_to_lane_rate": None if road_total == 0 else stats["road_to_lane"] / road_total,
                 "other_total": other_total,
                 "other_to_lane": stats["other_to_lane"],
                 "other_to_lane_rate": None if other_total == 0 else stats["other_to_lane"] / other_total,
-                "lane_tp_intensity_median": None
-                if lane_tp_intensity.size == 0
-                else float(np.percentile(lane_tp_intensity, 50)),
-                "lane_to_road_intensity_median": None
-                if lane_to_road_intensity.size == 0
-                else float(np.percentile(lane_to_road_intensity, 50)),
+                "lane_tp_intensity_p25": percentile_or_none(lane_tp_intensity, 25),
+                "lane_tp_intensity_median": percentile_or_none(lane_tp_intensity, 50),
+                "lane_tp_intensity_p75": percentile_or_none(lane_tp_intensity, 75),
+                "lane_to_road_intensity_p25": percentile_or_none(lane_to_road_intensity, 25),
+                "lane_to_road_intensity_median": percentile_or_none(lane_to_road_intensity, 50),
+                "lane_to_road_intensity_p75": percentile_or_none(lane_to_road_intensity, 75),
+                "road_tp_intensity_p25": percentile_or_none(road_tp_intensity, 25),
+                "road_tp_intensity_median": percentile_or_none(road_tp_intensity, 50),
+                "road_tp_intensity_p75": percentile_or_none(road_tp_intensity, 75),
             }
         )
     return rows
@@ -393,6 +412,7 @@ def main() -> None:
                 stats["lane_to_road"] += int((masks["lane_to_road"] & bucket_mask).sum())
                 stats["lane_to_other"] += int((masks["lane_to_other"] & bucket_mask).sum())
                 stats["road_total"] += int(((y_true_np == 0) & bucket_mask).sum())
+                stats["road_tp"] += int((masks["road_tp"] & bucket_mask).sum())
                 stats["road_to_lane"] += int((masks["road_to_lane"] & bucket_mask).sum())
                 stats["other_total"] += int(((y_true_np == 2) & bucket_mask).sum())
                 stats["other_to_lane"] += int((masks["other_to_lane"] & bucket_mask).sum())
@@ -400,6 +420,7 @@ def main() -> None:
                 stats["lane_to_road_intensity"].append(
                     intensity[masks["lane_to_road"] & bucket_mask]
                 )
+                stats["road_tp_intensity"].append(intensity[masks["road_tp"] & bucket_mask])
 
             attr = inputs["attr"]
             seq_id = attr["seq_id"][0] if isinstance(attr["seq_id"], list) else str(attr["seq_id"])
@@ -412,6 +433,9 @@ def main() -> None:
             lane_to_other = int(masks["lane_to_other"].sum())
             road_to_lane = int(masks["road_to_lane"].sum())
             other_to_lane = int(masks["other_to_lane"].sum())
+            predicted_lane = lane_tp + road_to_lane + other_to_lane
+            lane_false_positive = road_to_lane + other_to_lane
+            lane_union = lane_total + lane_false_positive
             row = {
                 "step": step,
                 "seq_id": seq_id,
@@ -423,20 +447,41 @@ def main() -> None:
                 "lane_to_other": lane_to_other,
                 "road_to_lane": road_to_lane,
                 "other_to_lane": other_to_lane,
+                "predicted_lane": predicted_lane,
+                "lane_false_positive": lane_false_positive,
                 "lane_recall": None if lane_total == 0 else lane_tp / lane_total,
+                "lane_precision": None if predicted_lane == 0 else lane_tp / predicted_lane,
+                "lane_f1": None
+                if lane_total + predicted_lane == 0
+                else (2 * lane_tp) / (lane_total + predicted_lane),
+                "lane_iou": None if lane_union == 0 else lane_tp / lane_union,
                 "lane_to_road_rate": None if lane_total == 0 else lane_to_road / lane_total,
                 "lane_tp_intensity_mean": None
                 if lane_tp == 0
                 else float(np.mean(intensity[masks["lane_tp"]])),
+                "lane_tp_intensity_median": percentile_or_none(intensity[masks["lane_tp"]], 50),
                 "lane_to_road_intensity_mean": None
                 if lane_to_road == 0
                 else float(np.mean(intensity[masks["lane_to_road"]])),
+                "lane_to_road_intensity_median": percentile_or_none(
+                    intensity[masks["lane_to_road"]], 50
+                ),
+                "road_to_lane_intensity_mean": None
+                if road_to_lane == 0
+                else float(np.mean(intensity[masks["road_to_lane"]])),
+                "road_to_lane_intensity_median": percentile_or_none(
+                    intensity[masks["road_to_lane"]], 50
+                ),
                 "lane_tp_range_mean": None
                 if lane_tp == 0
                 else float(np.mean(ranges[masks["lane_tp"]])),
+                "lane_tp_range_median": percentile_or_none(ranges[masks["lane_tp"]], 50),
                 "lane_to_road_range_mean": None
                 if lane_to_road == 0
                 else float(np.mean(ranges[masks["lane_to_road"]])),
+                "lane_to_road_range_median": percentile_or_none(
+                    ranges[masks["lane_to_road"]], 50
+                ),
             }
             frame_rows.append(row)
 
