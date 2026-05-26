@@ -46,7 +46,7 @@ class ProcSampler(threading.Thread):
         self.interval = interval
         self.peak_cpu_pct: float | None = None
         self.peak_rss_mb: float | None = None
-        self._stop = threading.Event()
+        self._stop_evt = threading.Event()
 
     def run(self) -> None:
         if not HAVE_PSUTIL:
@@ -63,7 +63,7 @@ class ProcSampler(threading.Thread):
 
         peak_cpu = 0.0
         peak_rss = 0.0
-        while not self._stop.is_set():
+        while not self._stop_evt.is_set():
             try:
                 # Walk children too — fast.py spawns a multiprocessing Pool.
                 procs = [proc] + proc.children(recursive=True)
@@ -82,13 +82,13 @@ class ProcSampler(threading.Thread):
                     peak_rss = rss_mb
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 break
-            self._stop.wait(self.interval)
+            self._stop_evt.wait(self.interval)
 
         self.peak_cpu_pct = peak_cpu if peak_cpu > 0 else None
         self.peak_rss_mb = peak_rss if peak_rss > 0 else None
 
     def stop(self) -> None:
-        self._stop.set()
+        self._stop_evt.set()
 
 
 def run_single(tsp_name: str, seed: int, out_dir: Path) -> tuple[int, ProcSampler]:
