@@ -1,0 +1,13 @@
+Machine: production-env-aebe5c1b45e44aa0861e20702a430ea0
+CPU:     Intel Core Processor (Haswell, no TSX, IBRS)
+Cores:   32 logical
+RAM:     322244 MB
+OS:      Linux-5.15.0-173-generic-x86_64-with-glibc2.31
+Python:  3.10.13
+
+Sweep summary:
+  Files:           35
+  Seeds per file:  30
+  Total runs:      1050
+  Total wall-time: 16h 30m 28s  (59428s)
+  Generated at:    2026-05-26T15:05:37
