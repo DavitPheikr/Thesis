@@ -92004,3 +92004,108 @@ Loading: TestDataVelocity35.tsp
 ──────────────────────────────────────────────────
 Phase 1: Photon Walk Algorithm  (32 workers)
   Trying all 523452 ordered start pairs …
+  [PWA] best cost: 568.664189  (523452 tours)
+  PWA best cost: 568.664189  (523452 tours generated)
+
+──────────────────────────────────────────────────
+Phase 2+3: ACO  (20 ants × 80 iterations)
+  Warm-starting pheromone from 20% elite PWA tours (boost ×5.0)
+  [ACO] iter    1/80  iter_best=526.197739  global_best=526.197739
+  [ACO] iter    2/80  iter_best=517.385751  global_best=517.385751
+  [ACO] iter    3/80  iter_best=526.140455  global_best=517.385751
+  [ACO] iter    4/80  iter_best=524.124386  global_best=517.385751
+  [ACO] iter    5/80  iter_best=521.886732  global_best=517.385751
+  [ACO] iter    6/80  iter_best=524.754387  global_best=517.385751
+  [ACO] iter    7/80  iter_best=519.549607  global_best=517.385751
+  [ACO] iter    8/80  iter_best=527.428521  global_best=517.385751
+  [ACO] iter    9/80  iter_best=526.547095  global_best=517.385751
+  [ACO] iter   10/80  iter_best=520.477653  global_best=517.385751
+  [ACO] iter   11/80  iter_best=526.566591  global_best=517.385751
+  [ACO] iter   12/80  iter_best=519.157865  global_best=517.385751
+  [ACO] iter   13/80  iter_best=522.940498  global_best=517.385751
+  [ACO] iter   14/80  iter_best=529.000131  global_best=517.385751
+  [ACO] iter   15/80  iter_best=523.230824  global_best=517.385751
+  [ACO] iter   16/80  iter_best=514.934995  global_best=514.934995
+  [ACO] iter   17/80  iter_best=522.901663  global_best=514.934995
+  [ACO] iter   18/80  iter_best=527.379555  global_best=514.934995
+  [ACO] iter   19/80  iter_best=524.904513  global_best=514.934995
+  [ACO] iter   20/80  iter_best=525.003682  global_best=514.934995
+  [ACO] iter   21/80  iter_best=528.216342  global_best=514.934995
+  [ACO] iter   22/80  iter_best=523.388769  global_best=514.934995
+  [ACO] iter   23/80  iter_best=526.309908  global_best=514.934995
+  [ACO] iter   24/80  iter_best=518.756357  global_best=514.934995
+  [ACO] iter   25/80  iter_best=515.468885  global_best=514.934995
+  [ACO] iter   26/80  iter_best=521.925775  global_best=514.934995
+  [ACO] iter   27/80  iter_best=521.246800  global_best=514.934995
+  [ACO] iter   28/80  iter_best=525.106335  global_best=514.934995
+  [ACO] iter   29/80  iter_best=517.884521  global_best=514.934995
+  [ACO] iter   30/80  iter_best=517.467906  global_best=514.934995
+  [ACO] iter   31/80  iter_best=516.814060  global_best=514.934995
+  [ACO] iter   32/80  iter_best=524.715513  global_best=514.934995
+  [ACO] iter   33/80  iter_best=530.306265  global_best=514.934995
+  [ACO] iter   34/80  iter_best=515.403611  global_best=514.934995
+  [ACO] iter   35/80  iter_best=521.997112  global_best=514.934995
+  [ACO] iter   36/80  iter_best=521.234017  global_best=514.934995
+  [ACO] iter   37/80  iter_best=517.247462  global_best=514.934995
+  [ACO] iter   38/80  iter_best=523.795660  global_best=514.934995
+  [ACO] iter   39/80  iter_best=521.770044  global_best=514.934995
+  [ACO] iter   40/80  iter_best=523.487406  global_best=514.934995
+  [ACO] iter   41/80  iter_best=516.423611  global_best=514.934995
+  [ACO] iter   42/80  iter_best=525.354709  global_best=514.934995
+  [ACO] iter   43/80  iter_best=523.064001  global_best=514.934995
+  [ACO] iter   44/80  iter_best=516.906189  global_best=514.934995
+  [ACO] iter   45/80  iter_best=520.710532  global_best=514.934995
+  [ACO] iter   46/80  iter_best=521.901988  global_best=514.934995
+  [ACO] iter   47/80  iter_best=521.597729  global_best=514.934995
+  [ACO] iter   48/80  iter_best=525.065851  global_best=514.934995
+  [ACO] iter   49/80  iter_best=526.946574  global_best=514.934995
+  [ACO] iter   50/80  iter_best=515.955121  global_best=514.934995
+  [ACO] iter   51/80  iter_best=528.794562  global_best=514.934995
+  [ACO] iter   52/80  iter_best=526.368668  global_best=514.934995
+  [ACO] iter   53/80  iter_best=518.214930  global_best=514.934995
+  [ACO] iter   54/80  iter_best=526.249840  global_best=514.934995
+  [ACO] iter   55/80  iter_best=517.351151  global_best=514.934995
+  [ACO] iter   56/80  iter_best=523.164673  global_best=514.934995
+  [ACO] iter   57/80  iter_best=522.439704  global_best=514.934995
+  [ACO] iter   58/80  iter_best=525.222999  global_best=514.934995
+  [ACO] iter   59/80  iter_best=516.237168  global_best=514.934995
+  [ACO] iter   60/80  iter_best=520.129463  global_best=514.934995
+  [ACO] iter   61/80  iter_best=521.304307  global_best=514.934995
+  [ACO] iter   62/80  iter_best=518.422309  global_best=514.934995
+  [ACO] iter   63/80  iter_best=518.715988  global_best=514.934995
+  [ACO] iter   64/80  iter_best=525.091214  global_best=514.934995
+  [ACO] iter   65/80  iter_best=525.727095  global_best=514.934995
+  [ACO] iter   66/80  iter_best=519.311346  global_best=514.934995
+  [ACO] iter   67/80  iter_best=514.606562  global_best=514.606562
+  [ACO] iter   68/80  iter_best=521.325280  global_best=514.606562
+  [ACO] iter   69/80  iter_best=520.688610  global_best=514.606562
+  [ACO] iter   70/80  iter_best=517.988265  global_best=514.606562
+  [ACO] iter   71/80  iter_best=522.513449  global_best=514.606562
+  [ACO] iter   72/80  iter_best=521.596295  global_best=514.606562
+  [ACO] iter   73/80  iter_best=528.343641  global_best=514.606562
+  [ACO] iter   74/80  iter_best=524.916042  global_best=514.606562
+  [ACO] iter   75/80  iter_best=518.808473  global_best=514.606562
+  [ACO] iter   76/80  iter_best=519.658944  global_best=514.606562
+  [ACO] iter   77/80  iter_best=524.503363  global_best=514.606562
+  [ACO] iter   78/80  iter_best=521.315968  global_best=514.606562
+  [ACO] iter   79/80  iter_best=524.131495  global_best=514.606562
+  [ACO] iter   80/80  iter_best=515.563730  global_best=514.606562
+
+──────────────────────────────────────────────────
+Phase 4: final 2-opt polish …
+
+==================================================
+  Dataset   : u724
+  PWA best  : 568.664189
+  Hybrid    : 499.380383  (+12.184% vs PWA)
+  Elapsed   : 429.4s
+==================================================
+  Saved summary: /home/coder/project/gigi3/results/TestDataVelocity35/seed_61/pwa_aco_summary_20260526_083114.txt
+  Saved plot   : /home/coder/project/gigi3/results/TestDataVelocity35/seed_61/pwa_aco_plot_20260526_083114.png
+  Saved metrics: /home/coder/project/gigi3/results/TestDataVelocity35/seed_61/metrics.json
+Loading: TestDataVelocity35.tsp
+  u724  |  724 cities
+
+──────────────────────────────────────────────────
+Phase 1: Photon Walk Algorithm  (32 workers)
+  Trying all 523452 ordered start pairs …
