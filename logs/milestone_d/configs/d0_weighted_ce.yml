@@ -31,7 +31,7 @@ model:
   is_resume: false
   num_neighbors: 24
   num_layers: 3
-  num_points: 24576
+  num_points: 32768
   num_classes: 3
   ignored_label_inds:
     - 0
@@ -57,8 +57,6 @@ model:
       max_s: 1.05
     noise:
       noise_std: 0.01
-    RandomDropout:
-      dropout_ratio: 0.15
 
 pipeline:
   name: SemanticSegmentation
