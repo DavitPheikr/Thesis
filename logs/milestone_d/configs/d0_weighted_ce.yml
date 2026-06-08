@@ -31,7 +31,7 @@ model:
   is_resume: false
   num_neighbors: 24
   num_layers: 3
-  num_points: 32768
+  num_points: 24576
   num_classes: 3
   ignored_label_inds:
     - 0
