@@ -17,9 +17,20 @@ ROAD_LABEL = 1
 LANE_LABEL = 2
 OTHER_LABEL = 3
 
+LABEL_MODE_LANE3 = "lane3"
+LABEL_MODE_ROAD_MARKING3 = "road_marking3"
+VALID_LABEL_MODES = {LABEL_MODE_LANE3, LABEL_MODE_ROAD_MARKING3}
+
 RAW_IGNORE_IDS = {1, 2, 3, 4}
 RAW_ROAD_ID = 7
 RAW_LANE_ID = 8
+RAW_STOP_LINE_ID = 9
+RAW_OTHER_ROAD_MARKING_ID = 10
+RAW_ROAD_MARKING_IDS = {
+    RAW_LANE_ID,
+    RAW_STOP_LINE_ID,
+    RAW_OTHER_ROAD_MARKING_ID,
+}
 
 INTENSITY_COLUMN = "i"
 
@@ -67,19 +78,36 @@ def scale_intensity_minmax(intensity: np.ndarray) -> np.ndarray:
     return scaled[:, None].astype(np.float32, copy=False)
 
 
-def remap_raw_pandaset_ids(raw_labels: np.ndarray) -> np.ndarray:
+def validate_label_mode(label_mode: str) -> str:
+    if label_mode not in VALID_LABEL_MODES:
+        valid = ", ".join(sorted(VALID_LABEL_MODES))
+        raise ValueError(f"Unsupported label_mode {label_mode!r}; expected one of: {valid}")
+    return label_mode
+
+
+def remap_raw_pandaset_ids(
+    raw_labels: np.ndarray,
+    label_mode: str = LABEL_MODE_LANE3,
+) -> np.ndarray:
+    label_mode = validate_label_mode(label_mode)
     remapped = np.full(raw_labels.shape, OTHER_LABEL, dtype=np.int32)
 
     # Local fragility: this remap depends on the Day 2 raw-ID verification.
     remapped[np.isin(raw_labels, list(RAW_IGNORE_IDS))] = IGNORE_LABEL
     remapped[raw_labels == RAW_ROAD_ID] = ROAD_LABEL
-    remapped[raw_labels == RAW_LANE_ID] = LANE_LABEL
+    if label_mode == LABEL_MODE_LANE3:
+        remapped[raw_labels == RAW_LANE_ID] = LANE_LABEL
+    elif label_mode == LABEL_MODE_ROAD_MARKING3:
+        remapped[np.isin(raw_labels, list(RAW_ROAD_MARKING_IDS))] = LANE_LABEL
     return remapped
 
 
-def remap_raw_labels(raw_labels: np.ndarray) -> np.ndarray:
+def remap_raw_labels(
+    raw_labels: np.ndarray,
+    label_mode: str = LABEL_MODE_LANE3,
+) -> np.ndarray:
     """Backward-compatible alias for the Milestone A adapter path."""
-    return remap_raw_pandaset_ids(raw_labels)
+    return remap_raw_pandaset_ids(raw_labels, label_mode=label_mode)
 
 
 def build_one_sample():

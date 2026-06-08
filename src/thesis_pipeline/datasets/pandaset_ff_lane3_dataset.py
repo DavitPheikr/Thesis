@@ -9,7 +9,12 @@ from pandaset import DataSet, geometry as pds_geometry
 
 from open3d._ml3d.datasets.base_dataset import BaseDataset, BaseDatasetSplit
 
-from thesis_pipeline.adapters.pandaset_ff_lane3 import remap_raw_pandaset_ids
+from thesis_pipeline.adapters.pandaset_ff_lane3 import (
+    LABEL_MODE_LANE3,
+    LABEL_MODE_ROAD_MARKING3,
+    remap_raw_pandaset_ids,
+    validate_label_mode,
+)
 from thesis_pipeline.core.pandaset_compat import get_frame_count
 
 
@@ -51,10 +56,12 @@ class PandaSetFFLane3Dataset(BaseDataset):
         dataset_root_file: str | None = None,
         preflight_pattern_file: str | None = None,
         manifest_file: str | None = None,
+        label_mode: str = LABEL_MODE_LANE3,
         steps_per_epoch_train: int | None = None,
         steps_per_epoch_valid: int | None = None,
         **kwargs,
     ):
+        self.label_mode = validate_label_mode(label_mode)
         self.stats_file = Path(stats_file) if stats_file else DEFAULT_STATS_FILE
         self.split_dir = Path(split_dir) if split_dir else DEFAULT_SPLIT_DIR
         dataset_root_path = (
@@ -115,6 +122,7 @@ class PandaSetFFLane3Dataset(BaseDataset):
             test_split=self._split_ids["test"],
             all_split=self._split_ids["all"],
             sampler=sampler,
+            label_mode=self.label_mode,
             steps_per_epoch_train=steps_per_epoch_train,
             steps_per_epoch_valid=steps_per_epoch_valid,
             **kwargs,
@@ -142,6 +150,11 @@ class PandaSetFFLane3Dataset(BaseDataset):
             2: "lane",
             3: "other",
         }
+
+    def get_positive_class_name(self) -> str:
+        if self.label_mode == LABEL_MODE_ROAD_MARKING3:
+            return "marking"
+        return "lane"
 
     def _build_frame_index_for_split(self, split_name: str) -> list[tuple[str, int]]:
         if split_name == "all":
@@ -217,7 +230,7 @@ class PandaSetFFLane3Dataset(BaseDataset):
         semseg_df = seq.semseg[frame_idx]
 
         raw_labels = semseg_df.loc[pc_df.index, "class"].to_numpy(dtype=np.int32)
-        labels = remap_raw_pandaset_ids(raw_labels)
+        labels = remap_raw_pandaset_ids(raw_labels, label_mode=self.label_mode)
 
         xyz_world = pc_df[["x", "y", "z"]].to_numpy(dtype=np.float32)
         pose = seq.lidar.poses[frame_idx]

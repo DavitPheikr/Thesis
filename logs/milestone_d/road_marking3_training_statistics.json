@@ -1,0 +1,174 @@
+{
+  "label_mode": "road_marking3",
+  "active_label_names": {
+    "0": "ignore",
+    "1": "road",
+    "2": "marking",
+    "3": "other"
+  },
+  "provenance": {
+    "script": "/home/pheikara/University/Y3S2/Thesis/Pipeline/tools/compute_milestone_d_training_statistics.py",
+    "split_file": "/home/pheikara/University/Y3S2/Thesis/Pipeline/configs/splits/train.txt",
+    "dataset_root": "/home/pheikara/University/Y3S2/Thesis/Pipeline/pandaset/PandaSet",
+    "dataset_root_file": "/home/pheikara/University/Y3S2/Thesis/Pipeline/logs/dataset_root.txt",
+    "output_dir": "/home/pheikara/University/Y3S2/Thesis/Pipeline/logs/milestone_d",
+    "limited_run": false,
+    "sequences_in_full_train_split": 58,
+    "sequences_in_plan": 58,
+    "sequences_completed": 58,
+    "frames_attempted": 4640,
+    "frames_processed": 4640,
+    "frames_semseg_missing": 0,
+    "frames_failed": 0,
+    "frame_errors": [],
+    "max_recorded_frame_errors": 20,
+    "skip_rate": 0.0,
+    "skip_rate_threshold": 0.05,
+    "forward_sensor_id": 1,
+    "sensor_reapply_per_frame": false,
+    "intensity_samples_total": 5800000,
+    "per_sequence_sample_cap": 100000,
+    "random_seed": 42,
+    "class_weight_runtime_note": "Local Open3D SemSegLoss transforms dataset.cfg.class_weights internally; use class_weights.sanity_run_recommended_list in Milestone D configs."
+  },
+  "intensity": {
+    "clip_low_p0p5": 0.0,
+    "clip_high_p99p5": 114.0,
+    "clip_mean": 22.471752166748047,
+    "clip_std": 14.902379989624023
+  },
+  "class_counts": {
+    "ignore": 398730,
+    "road": 119562394,
+    "marking": 5129328,
+    "other": 173473484
+  },
+  "raw_interest_counts": {
+    "raw_7_road": 119562394,
+    "raw_8_lane_line_marking": 2098182,
+    "raw_9_stop_line_marking": 162729,
+    "raw_10_other_road_marking": 2868417
+  },
+  "derived": {
+    "active_total": 298165206,
+    "road_share_active": 0.40099378329207197,
+    "marking_share_active": 0.017202973039047352,
+    "other_share_active": 0.5818032436688807,
+    "raw_8_9_10_marking_sum": 5129328
+  },
+  "class_weights": {
+    "deviation_note": "For local Open3D-ML, dataset.cfg.class_weights is transformed internally via DataProcessing.get_class_weights before CrossEntropyLoss is built. Use the count-like runtime list for training configs, not the direct candidate weights.",
+    "class_order": "[road, marking, other] after ignored label 0 is filtered out",
+    "candidate_weight_semantics": "direct final CrossEntropyLoss weights for analysis only; not consumed directly by the local Open3D runtime",
+    "raw_inverse_frequency": {
+      "by_class": {
+        "road": 1.4509034002781844,
+        "marking": 33.81992416940387,
+        "other": 1.0
+      },
+      "as_list": [
+        1.4509034002781844,
+        33.81992416940387,
+        1.0
+      ],
+      "marking_weight": 33.81992416940387
+    },
+    "sqrt_inverse_frequency": {
+      "by_class": {
+        "road": 1.2045345160177787,
+        "marking": 5.815490019714922,
+        "other": 1.0
+      },
+      "as_list": [
+        1.2045345160177787,
+        5.815490019714922,
+        1.0
+      ],
+      "marking_weight": 5.815490019714922
+    },
+    "candidate_recommended_variant": "raw_inverse_frequency",
+    "candidate_recommended_list": [
+      1.4509034002781844,
+      33.81992416940387,
+      1.0
+    ],
+    "runtime_open3d_native_transform": {
+      "input_semantics": "per-class counts or count-like values passed into DataProcessing.get_class_weights",
+      "runtime_input_source": "measured active-class counts from class_counts",
+      "runtime_input_by_class": {
+        "road": 119562394.0,
+        "marking": 5129328.0,
+        "other": 173473484.0
+      },
+      "runtime_input_as_list": [
+        119562394.0,
+        5129328.0,
+        173473484.0
+      ],
+      "runtime_effective_ce_weights": [
+        2.3753321170806885,
+        26.87957191467285,
+        1.6616727113723755
+      ]
+    },
+    "weight_format_source": "/home/pheikara/University/Y3S2/Thesis/Pipeline/logs/milestone_b_loss_interface.json",
+    "weight_scope_discovered": "active-classes-only; dataset.cfg.class_weights is transformed internally by DataProcessing.get_class_weights before CrossEntropyLoss is constructed",
+    "weight_list_length_discovered": "num_classes=3 for this project; ignored label 0 is omitted after filter_valid_label reduces labels",
+    "sanity_run_recommended_variant": "open3d_native_from_measured_counts",
+    "sanity_run_recommended_list": [
+      119562394.0,
+      5129328.0,
+      173473484.0
+    ],
+    "large_weight_warning": false
+  },
+  "grid_subsampling": {
+    "grid_size": 0.04,
+    "source_sequence_id": "003",
+    "source_frame_idx": 0,
+    "raw_point_count": 69411,
+    "post_grid_point_count": 56137,
+    "below_num_points_intent": false,
+    "duplication_will_occur": false,
+    "num_points_intent": 32768,
+    "note": "Informational only; final D0 config is created in a later stage."
+  },
+  "sanity_checks": {
+    "road_equals_raw7": true,
+    "marking_equals_raw8_plus_raw9_plus_raw10": true,
+    "matches_raw_road_marking_analysis_training_counts": {
+      "road": true,
+      "marking": true
+    },
+    "matches_c0_expected_remap_shift": {
+      "road": true,
+      "marking": true,
+      "other": true
+    }
+  },
+  "external_cross_checks": {
+    "raw_road_marking_analysis_training_counts": {
+      "source": "/home/pheikara/University/Y3S2/Thesis/Pipeline/logs/raw_road_marking_analysis/frame_marking_counts.csv",
+      "training_rows": 4640,
+      "counts": {
+        "raw_7_road": 119562394,
+        "raw_8_lane_line_marking": 2098182,
+        "raw_9_stop_line_marking": 162729,
+        "raw_10_other_road_marking": 2868417,
+        "raw_8_9_10_marking_sum": 5129328
+      }
+    },
+    "c0_lane3_comparison": {
+      "source": "/home/pheikara/University/Y3S2/Thesis/Pipeline/logs/milestone_b_training_statistics.json",
+      "c0_counts": {
+        "ignore": 398730,
+        "road": 119562394,
+        "lane": 2098182,
+        "other": 176504630
+      },
+      "expected_marking_from_c0_lane_plus_raw9_raw10": 5129328,
+      "expected_other_from_c0_other_minus_raw9_raw10": 173473484,
+      "note": "Expected values assume same train split, same forward sensor, and only remapping raw 9/10 from other into marking."
+    }
+  }
+}
