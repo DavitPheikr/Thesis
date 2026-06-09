@@ -379,6 +379,106 @@ class MilestoneDPipeline(SemanticSegmentation):
         except TypeError:
             return torch.load(path, map_location=self.device)
 
+    def _restore_cuda_rng_state_all(self, checkpoint: dict) -> None:
+        if not torch.cuda.is_available() or "torch_cuda_rng_state_all" not in checkpoint:
+            return
+
+        raw_states = checkpoint["torch_cuda_rng_state_all"]
+        if raw_states is None:
+            return
+        if isinstance(raw_states, torch.Tensor):
+            states = [raw_states]
+        elif isinstance(raw_states, (list, tuple)):
+            states = list(raw_states)
+        else:
+            print(
+                "resume_warning skipping_cuda_rng_state "
+                f"reason=unsupported_type type={type(raw_states).__name__}",
+                flush=True,
+            )
+            return
+
+        normalized_states = []
+        for idx, state in enumerate(states):
+            try:
+                if isinstance(state, torch.Tensor):
+                    tensor = state.detach().to(device="cpu", dtype=torch.uint8).contiguous()
+                else:
+                    tensor = torch.as_tensor(state, dtype=torch.uint8).cpu().contiguous()
+                if tensor.ndim != 1:
+                    tensor = tensor.reshape(-1).contiguous()
+                normalized_states.append(tensor)
+            except Exception as exc:  # noqa: BLE001
+                print(
+                    "resume_warning skipping_cuda_rng_state "
+                    f"reason=state_{idx}_invalid error={exc}",
+                    flush=True,
+                )
+                return
+
+        if not normalized_states:
+            return
+
+        device_count = torch.cuda.device_count()
+        if device_count > 0 and len(normalized_states) > device_count:
+            print(
+                "resume_warning truncating_cuda_rng_state "
+                f"checkpoint_devices={len(normalized_states)} available_devices={device_count}",
+                flush=True,
+            )
+            normalized_states = normalized_states[:device_count]
+
+        try:
+            torch.cuda.set_rng_state_all(normalized_states)
+        except Exception as exc:  # noqa: BLE001
+            print(
+                "resume_warning skipping_cuda_rng_state "
+                f"reason=set_rng_state_all_failed error={exc}",
+                flush=True,
+            )
+
+    def _restore_scheduler_metric_history(self, checkpoint: dict) -> None:
+        if "scheduler_metric_history" in checkpoint:
+            self.scheduler_metric_history = [
+                float(value) for value in checkpoint["scheduler_metric_history"]
+            ]
+            print(
+                "resume_scheduler_metric_history "
+                f"source=checkpoint count={len(self.scheduler_metric_history)}",
+                flush=True,
+            )
+            return
+
+        if not self.eval_history_path.exists():
+            print("resume_scheduler_metric_history source=missing_eval_history count=0")
+            return
+
+        metric_key = METRIC_ALIASES.get(
+            self.scheduler_watch_metric, self.scheduler_watch_metric
+        )
+        history: list[float] = []
+        with self.eval_history_path.open(newline="") as f:
+            for row in csv.DictReader(f):
+                try:
+                    row_epoch = int(row.get("epoch", "0"))
+                    if row_epoch <= 0 or row_epoch > self.start_epoch:
+                        continue
+                    value = row.get(metric_key)
+                    if value is None or value == "":
+                        continue
+                    metric_value = float(value)
+                    if np.isfinite(metric_value):
+                        history.append(metric_value)
+                except (TypeError, ValueError):
+                    continue
+
+        self.scheduler_metric_history = history
+        print(
+            "resume_scheduler_metric_history "
+            f"source=eval_history metric={metric_key} count={len(history)}",
+            flush=True,
+        )
+
     def _load_training_checkpoint(self) -> None:
         if self.resume_from is None:
             print("resume_checkpoint none", flush=True)
@@ -412,8 +512,8 @@ class MilestoneDPipeline(SemanticSegmentation):
             np.random.set_state(checkpoint["numpy_random_state"])
         if "torch_rng_state" in checkpoint:
             torch.set_rng_state(checkpoint["torch_rng_state"].cpu())
-        if torch.cuda.is_available() and "torch_cuda_rng_state_all" in checkpoint:
-            torch.cuda.set_rng_state_all(checkpoint["torch_cuda_rng_state_all"])
+        self._restore_cuda_rng_state_all(checkpoint)
+        self._restore_scheduler_metric_history(checkpoint)
 
         print(
             f"resume_checkpoint {checkpoint_path} completed_epoch={self.start_epoch}",
@@ -663,6 +763,7 @@ class MilestoneDPipeline(SemanticSegmentation):
                 "scheduler_state_dict": self.scheduler.state_dict(),
                 "scheduler_kind": self.scheduler_kind,
                 "scheduler_watch_metric": self.scheduler_watch_metric,
+                "scheduler_metric_history": list(self.scheduler_metric_history),
                 "python_random_state": random.getstate(),
                 "numpy_random_state": np.random.get_state(),
                 "torch_rng_state": torch.get_rng_state(),

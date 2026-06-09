@@ -77,7 +77,7 @@ pipeline:
     smoothing_window: 3
   batch_size: 2
   num_workers: 0
-  pin_memory: false
+  pin_memory: true
   val_batch_size: 2
   test_batch_size: 1
   max_epoch: 24
