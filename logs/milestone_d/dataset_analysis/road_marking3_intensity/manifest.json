@@ -1,0 +1,79 @@
+{
+  "generated_at": "2026-06-10T11:25:56",
+  "script": "logs/milestone_d/dataset_analysis/road_marking3_intensity/analysis_code/analyze_road_marking3_intensity.py",
+  "dataset_root": "/home/pheikara/University/Y3S2/Thesis/Pipeline/pandaset/PandaSet",
+  "label_mode": "road_marking3",
+  "forward_sensor_id": 1,
+  "frames_processed": 6080,
+  "sensor_reapply_per_frame": false,
+  "class_order": {
+    "1": "road",
+    "2": "marking",
+    "3": "other"
+  },
+  "raw_marking_subtypes": {
+    "8": "lane line marking",
+    "9": "stop line marking",
+    "10": "other road marking"
+  },
+  "raw_road_marking_ids": [
+    8,
+    9,
+    10
+  ],
+  "raw_road_id": 7,
+  "distance_buckets": [
+    {
+      "label": "0_10m",
+      "min_m": 0.0,
+      "max_m": 10.0
+    },
+    {
+      "label": "10_20m",
+      "min_m": 10.0,
+      "max_m": 20.0
+    },
+    {
+      "label": "20_30m",
+      "min_m": 20.0,
+      "max_m": 30.0
+    },
+    {
+      "label": "30_40m",
+      "min_m": 30.0,
+      "max_m": 40.0
+    },
+    {
+      "label": "40_60m",
+      "min_m": 40.0,
+      "max_m": 60.0
+    },
+    {
+      "label": "60m_plus",
+      "min_m": 60.0,
+      "max_m": null
+    }
+  ],
+  "count_validation": {
+    "skipped": false,
+    "computed": {
+      "road": 119562394,
+      "marking": 5129328,
+      "other": 173473484
+    },
+    "expected": {
+      "road": 119562394,
+      "marking": 5129328,
+      "other": 173473484
+    }
+  },
+  "outputs": [
+    "class_intensity_summary.csv",
+    "split_class_intensity_summary.csv",
+    "distance_bucket_intensity_summary.csv",
+    "frame_remapped_class_counts.csv",
+    "plots/class_intensity_histograms.png",
+    "plots/distance_intensity_medians.png",
+    "README.md"
+  ]
+}
