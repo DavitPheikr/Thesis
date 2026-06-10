@@ -1,0 +1,15 @@
+{
+  "config": "logs/milestone_d/configs/d0_weighted_ce.yml",
+  "run_name": "D0_weighted_ce_25ep",
+  "epochs": 25,
+  "seed": 42,
+  "steps_per_epoch_train": null,
+  "steps_per_epoch_valid": null,
+  "save_ckpt_freq": 1,
+  "device": null,
+  "pin_memory": null,
+  "no_cache": false,
+  "force": true,
+  "resume_from": null,
+  "resume_latest": false
+}

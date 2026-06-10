@@ -1,0 +1,3 @@
+git_available true
+commit 130e323dd2e2afedb4d2de834d3ec6caed96367d
+working_tree_dirty False
