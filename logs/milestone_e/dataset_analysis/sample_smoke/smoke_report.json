@@ -1,0 +1,59 @@
+{
+  "seq": "003",
+  "frame": 0,
+  "d0_feat_shape": [
+    69411,
+    1
+  ],
+  "e0_point_shape": [
+    69411,
+    3
+  ],
+  "e0_feat_shape": [
+    69411,
+    5
+  ],
+  "e0_label_unique": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "intensity": {
+    "shape": [
+      69411
+    ],
+    "dtype": "float32",
+    "min": -1.5075454711914062,
+    "max": 6.137084484100342,
+    "mean": -0.04373174160718918,
+    "std": 0.9827484488487244
+  },
+  "rgb_channel_means": {
+    "r": 0.24561327695846558,
+    "g": 0.25114935636520386,
+    "b": 0.26795125007629395
+  },
+  "rgb_valid_ratio": 0.9094812273979187,
+  "rgb_valid_unique_pre_voxel": [
+    0.0,
+    1.0
+  ],
+  "per_class": {
+    "road": {
+      "n_total": 29636,
+      "n_valid": 28927,
+      "valid_ratio": 0.9760763935753813
+    },
+    "marking": {
+      "n_total": 560,
+      "n_valid": 560,
+      "valid_ratio": 1.0
+    },
+    "other": {
+      "n_total": 39102,
+      "n_valid": 33530,
+      "valid_ratio": 0.85750089509488
+    }
+  }
+}

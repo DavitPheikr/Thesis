@@ -21,6 +21,20 @@ LABEL_MODE_LANE3 = "lane3"
 LABEL_MODE_ROAD_MARKING3 = "road_marking3"
 VALID_LABEL_MODES = {LABEL_MODE_LANE3, LABEL_MODE_ROAD_MARKING3}
 
+FEATURE_MODE_INTENSITY = "intensity"
+FEATURE_MODE_INTENSITY_RGB_FRONT = "intensity_rgb_front"
+VALID_FEATURE_MODES = {
+    FEATURE_MODE_INTENSITY,
+    FEATURE_MODE_INTENSITY_RGB_FRONT,
+}
+
+CAMERA_LOOKUP_NEAREST_TIMESTAMP = "nearest_timestamp"
+VALID_CAMERA_LOOKUPS = {CAMERA_LOOKUP_NEAREST_TIMESTAMP}
+
+COLOR_SAMPLING_BILINEAR = "bilinear"
+COLOR_SAMPLING_NEAREST = "nearest"
+VALID_COLOR_SAMPLINGS = {COLOR_SAMPLING_BILINEAR, COLOR_SAMPLING_NEAREST}
+
 RAW_IGNORE_IDS = {1, 2, 3, 4}
 RAW_ROAD_ID = 7
 RAW_LANE_ID = 8
@@ -83,6 +97,157 @@ def validate_label_mode(label_mode: str) -> str:
         valid = ", ".join(sorted(VALID_LABEL_MODES))
         raise ValueError(f"Unsupported label_mode {label_mode!r}; expected one of: {valid}")
     return label_mode
+
+
+def validate_feature_mode(feature_mode: str) -> str:
+    if feature_mode not in VALID_FEATURE_MODES:
+        valid = ", ".join(sorted(VALID_FEATURE_MODES))
+        raise ValueError(
+            f"Unsupported feature_mode {feature_mode!r}; expected one of: {valid}"
+        )
+    return feature_mode
+
+
+def validate_camera_lookup(camera_lookup: str) -> str:
+    if camera_lookup not in VALID_CAMERA_LOOKUPS:
+        valid = ", ".join(sorted(VALID_CAMERA_LOOKUPS))
+        raise ValueError(
+            f"Unsupported camera_lookup {camera_lookup!r}; expected one of: {valid}"
+        )
+    return camera_lookup
+
+
+def validate_color_sampling(color_sampling: str) -> str:
+    if color_sampling not in VALID_COLOR_SAMPLINGS:
+        valid = ", ".join(sorted(VALID_COLOR_SAMPLINGS))
+        raise ValueError(
+            f"Unsupported color_sampling {color_sampling!r}; expected one of: {valid}"
+        )
+    return color_sampling
+
+
+# --- camera/projection helpers for FEATURE_MODE_INTENSITY_RGB_FRONT ---
+
+
+def _quat_to_rot(w: float, x: float, y: float, z: float) -> np.ndarray:
+    return np.array(
+        [
+            [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+        ],
+        dtype=np.float64,
+    )
+
+
+def _pose_to_mat(pose: dict) -> np.ndarray:
+    heading = pose["heading"]
+    position = pose["position"]
+    rotation = _quat_to_rot(heading["w"], heading["x"], heading["y"], heading["z"])
+    transform = np.eye(4, dtype=np.float64)
+    transform[:3, :3] = rotation
+    transform[:3, 3] = [position["x"], position["y"], position["z"]]
+    return transform
+
+
+def project_points_to_camera(
+    points_world: np.ndarray,
+    camera_pose: dict,
+    intrinsics: dict,
+    image_w: int,
+    image_h: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Project world-frame points to a pinhole camera.
+
+    Returns (uv, depth, in_image_mask) all of length N. uv and depth are
+    only meaningful where in_image_mask is True.
+    """
+    camera_mat = _pose_to_mat(camera_pose)
+    transform = np.linalg.inv(camera_mat)
+    pts_cam = transform[:3, :3] @ points_world.T + transform[:3, 3:4]
+    depth = pts_cam[2, :]
+    safe_z = np.where(depth > 1e-6, depth, 1.0)
+    K = np.array(
+        [
+            [intrinsics["fx"], 0.0, intrinsics["cx"]],
+            [0.0, intrinsics["fy"], intrinsics["cy"]],
+            [0.0, 0.0, 1.0],
+        ],
+        dtype=np.float64,
+    )
+    uvw = K @ pts_cam
+    u = uvw[0, :] / safe_z
+    v = uvw[1, :] / safe_z
+    in_img = (depth > 0) & (u > 0) & (u < image_w) & (v > 0) & (v < image_h)
+    uv = np.stack([u, v], axis=1)
+    return uv, depth, in_img
+
+
+def bilinear_sample_rgb(
+    image_array: np.ndarray, uv: np.ndarray, valid_mask: np.ndarray
+) -> np.ndarray:
+    """Bilinear-sample image_array at floating uv coordinates.
+
+    image_array: uint8 (H, W, 3)
+    uv:          float (N, 2)
+    valid_mask:  bool  (N,) where True indicates we should sample
+
+    Returns float32 (N, 3) in [0, 1]. Rows where valid_mask is False are
+    zero-filled.
+    """
+    n = uv.shape[0]
+    out = np.zeros((n, 3), dtype=np.float32)
+    if not valid_mask.any():
+        return out
+
+    h, w = image_array.shape[0], image_array.shape[1]
+    idx = np.where(valid_mask)[0]
+    u = uv[idx, 0]
+    v = uv[idx, 1]
+    # Clamp so the +1 neighbor never escapes the image. valid_mask already
+    # enforces 0 < u < w and 0 < v < h, so u/v are strictly inside.
+    u0 = np.floor(u).astype(np.int64)
+    v0 = np.floor(v).astype(np.int64)
+    u1 = np.minimum(u0 + 1, w - 1)
+    v1 = np.minimum(v0 + 1, h - 1)
+    u0 = np.clip(u0, 0, w - 1)
+    v0 = np.clip(v0, 0, h - 1)
+    du = (u - u0).astype(np.float32)
+    dv = (v - v0).astype(np.float32)
+
+    img_f = image_array.astype(np.float32) / 255.0
+    c00 = img_f[v0, u0]
+    c10 = img_f[v0, u1]
+    c01 = img_f[v1, u0]
+    c11 = img_f[v1, u1]
+
+    one_minus_du = 1.0 - du
+    one_minus_dv = 1.0 - dv
+    sampled = (
+        c00 * (one_minus_du * one_minus_dv)[:, None]
+        + c10 * (du * one_minus_dv)[:, None]
+        + c01 * (one_minus_du * dv)[:, None]
+        + c11 * (du * dv)[:, None]
+    )
+    out[idx] = sampled.astype(np.float32, copy=False)
+    return out
+
+
+def nearest_sample_rgb(
+    image_array: np.ndarray, uv: np.ndarray, valid_mask: np.ndarray
+) -> np.ndarray:
+    n = uv.shape[0]
+    out = np.zeros((n, 3), dtype=np.float32)
+    if not valid_mask.any():
+        return out
+    h, w = image_array.shape[0], image_array.shape[1]
+    idx = np.where(valid_mask)[0]
+    u = np.clip(np.round(uv[idx, 0]).astype(np.int64), 0, w - 1)
+    v = np.clip(np.round(uv[idx, 1]).astype(np.int64), 0, h - 1)
+    out[idx] = (image_array[v, u].astype(np.float32) / 255.0).astype(
+        np.float32, copy=False
+    )
+    return out
 
 
 def remap_raw_pandaset_ids(

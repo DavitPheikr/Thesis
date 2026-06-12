@@ -2,20 +2,37 @@ from __future__ import annotations
 
 import gc
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
 from pandaset import DataSet, geometry as pds_geometry
+from PIL import Image
 
 from open3d._ml3d.datasets.base_dataset import BaseDataset, BaseDatasetSplit
 
 from thesis_pipeline.adapters.pandaset_ff_lane3 import (
+    CAMERA_LOOKUP_NEAREST_TIMESTAMP,
+    COLOR_SAMPLING_BILINEAR,
+    COLOR_SAMPLING_NEAREST,
+    FEATURE_MODE_INTENSITY,
+    FEATURE_MODE_INTENSITY_RGB_FRONT,
     LABEL_MODE_LANE3,
     LABEL_MODE_ROAD_MARKING3,
+    bilinear_sample_rgb,
+    nearest_sample_rgb,
+    project_points_to_camera,
     remap_raw_pandaset_ids,
+    validate_camera_lookup,
+    validate_color_sampling,
+    validate_feature_mode,
     validate_label_mode,
 )
 from thesis_pipeline.core.pandaset_compat import get_frame_count
+
+
+CACHE_MANIFEST_FILENAME = "cache_manifest.json"
+CACHE_MANIFEST_SCHEMA_VERSION = 1
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -57,11 +74,27 @@ class PandaSetFFLane3Dataset(BaseDataset):
         preflight_pattern_file: str | None = None,
         manifest_file: str | None = None,
         label_mode: str = LABEL_MODE_LANE3,
+        feature_mode: str = FEATURE_MODE_INTENSITY,
+        camera_name: str = "front_camera",
+        camera_lookup: str = CAMERA_LOOKUP_NEAREST_TIMESTAMP,
+        rgb_max_dt_s: float = 0.060,
+        color_sampling: str = COLOR_SAMPLING_BILINEAR,
+        rgb_normalization: str = "divide_by_255",
+        motion_compensation: str = "none",
         steps_per_epoch_train: int | None = None,
         steps_per_epoch_valid: int | None = None,
         **kwargs,
     ):
         self.label_mode = validate_label_mode(label_mode)
+        self.feature_mode = validate_feature_mode(feature_mode)
+        self.camera_name = str(camera_name)
+        self.camera_lookup = validate_camera_lookup(camera_lookup)
+        self.rgb_max_dt_s = float(rgb_max_dt_s)
+        self.color_sampling = validate_color_sampling(color_sampling)
+        self.rgb_normalization = str(rgb_normalization)
+        self.motion_compensation = str(motion_compensation)
+        # Per-sequence camera metadata cache (JSON sidecars only; never images).
+        self._camera_meta_by_seq: dict[str, dict] = {}
         self.stats_file = Path(stats_file) if stats_file else DEFAULT_STATS_FILE
         self.split_dir = Path(split_dir) if split_dir else DEFAULT_SPLIT_DIR
         dataset_root_path = (
@@ -123,6 +156,13 @@ class PandaSetFFLane3Dataset(BaseDataset):
             all_split=self._split_ids["all"],
             sampler=sampler,
             label_mode=self.label_mode,
+            feature_mode=self.feature_mode,
+            camera_name=self.camera_name,
+            camera_lookup=self.camera_lookup,
+            rgb_max_dt_s=self.rgb_max_dt_s,
+            color_sampling=self.color_sampling,
+            rgb_normalization=self.rgb_normalization,
+            motion_compensation=self.motion_compensation,
             steps_per_epoch_train=steps_per_epoch_train,
             steps_per_epoch_valid=steps_per_epoch_valid,
             **kwargs,
@@ -142,6 +182,12 @@ class PandaSetFFLane3Dataset(BaseDataset):
 
         self._frame_index_by_split: dict[str, list[tuple[str, int]]] = {}
 
+        # Cache manifest: only meaningful when use_cache is on AND the new
+        # feature mode is in use. D0 (intensity-only) configs keep their
+        # existing cache semantics unchanged.
+        if use_cache and self.feature_mode != FEATURE_MODE_INTENSITY:
+            self._validate_or_write_cache_manifest(Path(cache_dir))
+
     @staticmethod
     def get_label_to_names():
         return {
@@ -155,6 +201,137 @@ class PandaSetFFLane3Dataset(BaseDataset):
         if self.label_mode == LABEL_MODE_ROAD_MARKING3:
             return "marking"
         return "lane"
+
+    def _build_cache_manifest(self) -> dict:
+        return {
+            "schema_version": CACHE_MANIFEST_SCHEMA_VERSION,
+            "label_mode": self.label_mode,
+            "feature_mode": self.feature_mode,
+            "camera_name": self.camera_name,
+            "camera_lookup": self.camera_lookup,
+            "rgb_max_dt_s": float(self.rgb_max_dt_s),
+            "color_sampling": self.color_sampling,
+            "rgb_normalization": self.rgb_normalization,
+            "motion_compensation": self.motion_compensation,
+            "intensity_clip_low": float(self.intensity_clip_low),
+            "intensity_clip_high": float(self.intensity_clip_high),
+            "intensity_mean": float(self.intensity_mean),
+            "intensity_std": float(self.intensity_std),
+            "forward_sensor_id": 1,
+        }
+
+    def _validate_or_write_cache_manifest(self, cache_dir: Path) -> None:
+        manifest_path = cache_dir / CACHE_MANIFEST_FILENAME
+        current = self._build_cache_manifest()
+
+        if cache_dir.exists() and any(cache_dir.iterdir()):
+            # Cache dir is non-empty: there must be a manifest, and it
+            # must agree with the active config field-for-field.
+            if not manifest_path.exists():
+                raise RuntimeError(
+                    "Refusing to use cache_dir without a cache_manifest.json: "
+                    f"{cache_dir}. This looks like a foreign cache (e.g. a D0 "
+                    "intensity-only cache or an earlier E0 build). Point "
+                    "cache_dir at a new versioned path."
+                )
+            existing = json.loads(manifest_path.read_text())
+            diff = {
+                k: (existing.get(k), current[k])
+                for k in current
+                if existing.get(k) != current[k]
+            }
+            if diff:
+                lines = "\n".join(
+                    f"  {k}: cache={v[0]!r} active={v[1]!r}" for k, v in diff.items()
+                )
+                raise RuntimeError(
+                    "Cache manifest mismatch -- refusing to reuse stale cache.\n"
+                    f"cache_dir: {cache_dir}\n"
+                    f"manifest:  {manifest_path}\n"
+                    f"diff:\n{lines}\n"
+                    "Bump the cache version (e.g. _v1 -> _v2) and rebuild."
+                )
+            return
+
+        # Fresh cache: create dir and write the manifest now so any later
+        # process attaching to this cache sees the contract.
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        payload = dict(current)
+        payload["created_at"] = datetime.now(timezone.utc).isoformat()
+        manifest_path.write_text(json.dumps(payload, indent=2, sort_keys=True))
+
+    def _get_camera_metadata(self, seq_id: str) -> dict:
+        """Lazy per-sequence load of camera intrinsics / poses / timestamps.
+
+        Reads JSON sidecars directly. Never calls Camera.load() (that would
+        decode all 80 images into memory).
+        """
+        if seq_id in self._camera_meta_by_seq:
+            return self._camera_meta_by_seq[seq_id]
+        cam_dir = Path(self._dataset_path) / seq_id / "camera" / self.camera_name
+        intrinsics = json.loads((cam_dir / "intrinsics.json").read_text())
+        cam_poses = json.loads((cam_dir / "poses.json").read_text())
+        cam_ts = json.loads((cam_dir / "timestamps.json").read_text())
+        lid_ts = json.loads(
+            (Path(self._dataset_path) / seq_id / "lidar" / "timestamps.json").read_text()
+        )
+        meta = {
+            "cam_dir": cam_dir,
+            "intrinsics": intrinsics,
+            "cam_poses": cam_poses,
+            "cam_ts": np.asarray(cam_ts, dtype=np.float64),
+            "lid_ts": np.asarray(lid_ts, dtype=np.float64),
+        }
+        self._camera_meta_by_seq[seq_id] = meta
+        return meta
+
+    def _compute_rgb_features(
+        self,
+        seq_id: str,
+        frame_idx: int,
+        xyz_world: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Returns (rgb (N, 3) float32 in [0, 1], rgb_valid (N,) float32 in {0, 1}).
+
+        Applies the step-4 timestamp policy. If the chosen camera frame is
+        outside the configured dt window, all points get rgb=0, rgb_valid=0
+        and no image is loaded.
+        """
+        meta = self._get_camera_metadata(seq_id)
+        n = xyz_world.shape[0]
+
+        target_t = float(meta["lid_ts"][frame_idx])
+        diffs = np.abs(meta["cam_ts"] - target_t)
+        cam_idx = int(np.argmin(diffs))
+        dt = float(meta["cam_ts"][cam_idx] - target_t)
+
+        rgb = np.zeros((n, 3), dtype=np.float32)
+        rgb_valid = np.zeros(n, dtype=np.float32)
+        if abs(dt) > self.rgb_max_dt_s:
+            return rgb, rgb_valid
+
+        # Load just the one image we need.
+        img_path = meta["cam_dir"] / f"{cam_idx:02d}.jpg"
+        with Image.open(img_path) as img_lazy:
+            img = img_lazy.convert("RGB")
+            image_array = np.asarray(img, dtype=np.uint8)
+            image_w, image_h = img.size
+
+        uv, _depth, in_img = project_points_to_camera(
+            xyz_world.astype(np.float64, copy=False),
+            meta["cam_poses"][cam_idx],
+            meta["intrinsics"],
+            image_w,
+            image_h,
+        )
+        if self.color_sampling == COLOR_SAMPLING_BILINEAR:
+            rgb = bilinear_sample_rgb(image_array, uv, in_img)
+        else:
+            rgb = nearest_sample_rgb(image_array, uv, in_img)
+        rgb_valid[in_img] = 1.0
+        # Drop image refs explicitly so subsequent frames don't pile up.
+        del image_array
+        return rgb, rgb_valid
 
     def _build_frame_index_for_split(self, split_name: str) -> list[tuple[str, int]]:
         if split_name == "all":
@@ -241,7 +418,16 @@ class PandaSetFFLane3Dataset(BaseDataset):
         intensity = pc_df["i"].to_numpy(dtype=np.float32)
         intensity = np.clip(intensity, self.intensity_clip_low, self.intensity_clip_high)
         intensity = (intensity - self.intensity_mean) / self.intensity_std
-        feat = intensity[:, None].astype(np.float32, copy=False)
+        intensity_col = intensity[:, None].astype(np.float32, copy=False)
+
+        if self.feature_mode == FEATURE_MODE_INTENSITY_RGB_FRONT:
+            rgb, rgb_valid = self._compute_rgb_features(seq_id, frame_idx, xyz_world)
+            # Layout: [intensity, r, g, b, rgb_valid], all float32, shape (N, 5).
+            feat = np.concatenate(
+                [intensity_col, rgb, rgb_valid[:, None]], axis=1
+            ).astype(np.float32, copy=False)
+        else:
+            feat = intensity_col
 
         sample = {
             "point": xyz_ego,
