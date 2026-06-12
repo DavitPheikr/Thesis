@@ -62,6 +62,7 @@ from thesis_pipeline.eval.milestone_c_metrics import (
 
 DEFAULT_CONFIG = PROJECT_ROOT / "logs/milestone_d/configs/d0_weighted_ce.yml"
 RUNS_DIR = PROJECT_ROOT / "logs/milestone_d/runs"
+DEFAULT_COMPLETION_LABEL = "milestone_d_run_complete"
 EVAL_CSV_COLUMNS_D = tuple(EVAL_CSV_COLUMNS) + ("lr",)
 METRIC_ALIASES = {
     "marking_iou": "lane_iou",
@@ -776,16 +777,21 @@ class MilestoneDPipeline(SemanticSegmentation):
         print(f"saved_checkpoint {path}")
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+def parse_args(
+    default_config: Path = DEFAULT_CONFIG,
+    default_runs_dir: Path = RUNS_DIR,
+    description: str | None = None,
+) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=description or __doc__)
+    parser.add_argument("--config", type=Path, default=default_config)
     parser.add_argument("--run-name", required=True)
     parser.add_argument(
         "--runs-dir",
         type=Path,
         help=(
-            "Directory that contains run folders. Defaults to logs/milestone_d/runs, "
-            "except configs under logs/milestone_e infer logs/milestone_e/runs."
+            "Directory that contains run folders. Defaults to "
+            f"{default_runs_dir.relative_to(PROJECT_ROOT)}, except configs under "
+            "logs/milestone_e infer logs/milestone_e/runs."
         ),
     )
     parser.add_argument(
@@ -842,7 +848,10 @@ def set_seeds(seed: int) -> None:
         print(f"determinism_warning {exc}")
 
 
-def resolve_runs_dir(args: argparse.Namespace) -> Path:
+def resolve_runs_dir(
+    args: argparse.Namespace,
+    default_runs_dir: Path = RUNS_DIR,
+) -> Path:
     if args.runs_dir is not None:
         runs_dir = args.runs_dir
         if not runs_dir.is_absolute():
@@ -860,7 +869,7 @@ def resolve_runs_dir(args: argparse.Namespace) -> Path:
     if len(rel_parts) >= 3 and rel_parts[0] == "logs" and rel_parts[1] == "milestone_e":
         return PROJECT_ROOT / "logs/milestone_e/runs"
 
-    return RUNS_DIR
+    return default_runs_dir
 
 
 def prepare_run_dir(run_name: str, force: bool, resume: bool, runs_dir: Path) -> Path:
@@ -1054,14 +1063,23 @@ def attach_ego_ranges_to_transform(model) -> None:  # noqa: ANN001
     model.transform = transform_with_ranges
 
 
-def main() -> None:
-    args = parse_args()
+def main(
+    default_config: Path = DEFAULT_CONFIG,
+    default_runs_dir: Path = RUNS_DIR,
+    completion_label: str = DEFAULT_COMPLETION_LABEL,
+    description: str | None = None,
+) -> None:
+    args = parse_args(
+        default_config=default_config,
+        default_runs_dir=default_runs_dir,
+        description=description,
+    )
     if args.epochs < 1:
         raise SystemExit("--epochs must be >= 1")
     if args.save_ckpt_freq < 1:
         raise SystemExit("--save-ckpt-freq must be >= 1")
     resume_requested = args.resume_from is not None or args.resume_latest
-    runs_dir = resolve_runs_dir(args)
+    runs_dir = resolve_runs_dir(args, default_runs_dir=default_runs_dir)
     run_dir = prepare_run_dir(args.run_name, args.force, resume_requested, runs_dir)
     resume_checkpoint = resolve_resume_checkpoint(args, run_dir)
     stdout_path = run_dir / "stdout.log"
@@ -1084,7 +1102,7 @@ def main() -> None:
             wall_clock = time.monotonic() - start
             (run_dir / "end_time.txt").write_text(datetime.now().isoformat() + "\n")
             print(
-                "milestone_d_run_complete: "
+                f"{completion_label}: "
                 f"run_name={args.run_name} epochs={args.epochs} "
                 f"wall_clock={wall_clock:.3f}"
             )

@@ -50,14 +50,16 @@ Only after step 10 passes should E0 launch a full training run.
 
 ## Training Runner Note
 
-E0 currently uses `tools/train_milestone_d.py` because that runner already
-contains the AdamW, ReduceLROnPlateau, checkpoint, resume, and metric plumbing
-needed for the road-marking task. For Milestone E launches, pass:
+E0 uses `tools/train_milestone_e.py`. This is a thin Milestone E wrapper around
+the shared road-marking training runner. It keeps the AdamW,
+ReduceLROnPlateau, checkpoint, resume, and metric plumbing from Milestone D,
+but pins Milestone E defaults:
 
-```bash
---config logs/milestone_e/configs/e0_rgb_front.yml \
---runs-dir logs/milestone_e/runs
+```text
+default config:   logs/milestone_e/configs/e0_rgb_front.yml
+default runs dir: logs/milestone_e/runs
+completion log:   milestone_e_run_complete
 ```
 
-The runner also infers `logs/milestone_e/runs` for configs under
-`logs/milestone_e`, but the explicit flag is preferred in launch commands.
+Use `tools/train_milestone_d.py` for D runs and `tools/train_milestone_e.py`
+for E runs, so command names, configs, run directories, and logs stay aligned.

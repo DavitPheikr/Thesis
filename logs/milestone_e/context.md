@@ -1120,12 +1120,11 @@ Plan:
 
 1. Delete any existing `logs/milestone_e/cache/E0_rgb_front_v1/` so the
    build is fresh.
-2. Use `tools/train_milestone_d.py` with the E0 config and either:
+2. Use `tools/train_milestone_e.py` with either:
    a. a hand-truncated train index (1-2 sequences) or
    b. a tiny `--epochs 2` run on the full data with `save_ckpt_freq: 1`.
-   Pass `--runs-dir logs/milestone_e/runs` explicitly; the runner now also
-   infers this for configs under `logs/milestone_e`, but the explicit flag
-   keeps launch commands unambiguous.
+   The E wrapper defaults to `logs/milestone_e/configs/e0_rgb_front.yml` and
+   `logs/milestone_e/runs`, and logs `milestone_e_run_complete` on success.
 3. Watch for:
    - cache manifest gets written without errors
    - model accepts `in_channels=8`
@@ -1154,9 +1153,7 @@ rm -rf logs/milestone_e/cache/E0_rgb_front_v1
 rm -rf logs/milestone_e/runs/E0_rgb_front
 mkdir -p logs/milestone_e/launch_logs
 
-nohup python tools/train_milestone_d.py \
-  --config logs/milestone_e/configs/e0_rgb_front.yml \
-  --runs-dir logs/milestone_e/runs \
+nohup python tools/train_milestone_e.py \
   --run-name E0_rgb_front \
   --epochs 25 \
   --save-ckpt-freq 1 \
