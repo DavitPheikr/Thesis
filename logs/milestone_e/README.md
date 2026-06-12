@@ -37,7 +37,7 @@ Each step is from the agreed first-tasks list. "Done when" describes the gate.
 | ---: | --- | --- | --- |
 | 1 | Inventory check on all split sequences | done | `dataset_analysis/front_camera_inventory/` |
 | 2 | Confirm `geometry.projection` contract | done | `notes/projection_contract.md` |
-| 3 | Visual overlay sanity check (8 frames) | pending | -- |
+| 3 | Visual overlay sanity check (8 frames) | in progress | `dataset_analysis/projection_overlay/` |
 | 4 | Timestamp + ego-motion policy | pending | -- |
 | 5 | Stratified valid-RGB audit | pending | -- |
 | 6 | Occlusion screening measurement | pending | -- |
