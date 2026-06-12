@@ -41,7 +41,7 @@ Each step is from the agreed first-tasks list. "Done when" describes the gate.
 | 4 | Timestamp + ego-motion policy | done | `notes/timestamp_policy.md`, `dataset_analysis/timestamp_policy/` |
 | 5 | Stratified valid-RGB audit | done | `dataset_analysis/valid_rgb_audit/` |
 | 6 | Occlusion screening measurement | done -- 0.03% marking occluded, skip for E0 | `dataset_analysis/occlusion_audit/` |
-| 7 | Voxel-subsampling rgb_valid policy | pending | -- |
+| 7 | Voxel-subsampling rgb_valid policy | done -- 0.03% mixed, pass-through | `dataset_analysis/voxel_mixing_audit/` |
 | 8 | Cache versioning + projection-at-runtime decision | pending | -- |
 | 9 | Dataset extension + single-sample smoke | pending | -- |
 | 10 | 1-2 epoch tiny training smoke | pending | -- |
