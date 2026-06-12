@@ -27,6 +27,8 @@ from thesis_pipeline.adapters.pandaset_ff_lane3 import (
     validate_color_sampling,
     validate_feature_mode,
     validate_label_mode,
+    validate_motion_compensation,
+    validate_rgb_normalization,
 )
 from thesis_pipeline.core.pandaset_compat import get_frame_count
 
@@ -81,6 +83,7 @@ class PandaSetFFLane3Dataset(BaseDataset):
         color_sampling: str = COLOR_SAMPLING_BILINEAR,
         rgb_normalization: str = "divide_by_255",
         motion_compensation: str = "none",
+        cache_grid_size: float | None = None,
         steps_per_epoch_train: int | None = None,
         steps_per_epoch_valid: int | None = None,
         **kwargs,
@@ -91,8 +94,9 @@ class PandaSetFFLane3Dataset(BaseDataset):
         self.camera_lookup = validate_camera_lookup(camera_lookup)
         self.rgb_max_dt_s = float(rgb_max_dt_s)
         self.color_sampling = validate_color_sampling(color_sampling)
-        self.rgb_normalization = str(rgb_normalization)
-        self.motion_compensation = str(motion_compensation)
+        self.rgb_normalization = validate_rgb_normalization(str(rgb_normalization))
+        self.motion_compensation = validate_motion_compensation(str(motion_compensation))
+        self.cache_grid_size = None if cache_grid_size is None else float(cache_grid_size)
         # Per-sequence camera metadata cache (JSON sidecars only; never images).
         self._camera_meta_by_seq: dict[str, dict] = {}
         self.stats_file = Path(stats_file) if stats_file else DEFAULT_STATS_FILE
@@ -163,6 +167,7 @@ class PandaSetFFLane3Dataset(BaseDataset):
             color_sampling=self.color_sampling,
             rgb_normalization=self.rgb_normalization,
             motion_compensation=self.motion_compensation,
+            cache_grid_size=self.cache_grid_size,
             steps_per_epoch_train=steps_per_epoch_train,
             steps_per_epoch_valid=steps_per_epoch_valid,
             **kwargs,
@@ -213,10 +218,14 @@ class PandaSetFFLane3Dataset(BaseDataset):
             "color_sampling": self.color_sampling,
             "rgb_normalization": self.rgb_normalization,
             "motion_compensation": self.motion_compensation,
+            "rgb_invalid_fill": [0.0, 0.0, 0.0],
+            "rgb_valid_policy": "zero_with_valid_flag",
+            "rgb_valid_aggregation": "passthrough_fractional",
             "intensity_clip_low": float(self.intensity_clip_low),
             "intensity_clip_high": float(self.intensity_clip_high),
             "intensity_mean": float(self.intensity_mean),
             "intensity_std": float(self.intensity_std),
+            "cache_grid_size": self.cache_grid_size,
             "forward_sensor_id": 1,
         }
 

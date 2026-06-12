@@ -35,6 +35,12 @@ COLOR_SAMPLING_BILINEAR = "bilinear"
 COLOR_SAMPLING_NEAREST = "nearest"
 VALID_COLOR_SAMPLINGS = {COLOR_SAMPLING_BILINEAR, COLOR_SAMPLING_NEAREST}
 
+RGB_NORMALIZATION_DIVIDE_BY_255 = "divide_by_255"
+VALID_RGB_NORMALIZATIONS = {RGB_NORMALIZATION_DIVIDE_BY_255}
+
+MOTION_COMPENSATION_NONE = "none"
+VALID_MOTION_COMPENSATIONS = {MOTION_COMPENSATION_NONE}
+
 RAW_IGNORE_IDS = {1, 2, 3, 4}
 RAW_ROAD_ID = 7
 RAW_LANE_ID = 8
@@ -124,6 +130,26 @@ def validate_color_sampling(color_sampling: str) -> str:
             f"Unsupported color_sampling {color_sampling!r}; expected one of: {valid}"
         )
     return color_sampling
+
+
+def validate_rgb_normalization(rgb_normalization: str) -> str:
+    if rgb_normalization not in VALID_RGB_NORMALIZATIONS:
+        valid = ", ".join(sorted(VALID_RGB_NORMALIZATIONS))
+        raise ValueError(
+            "Unsupported rgb_normalization "
+            f"{rgb_normalization!r}; expected one of: {valid}"
+        )
+    return rgb_normalization
+
+
+def validate_motion_compensation(motion_compensation: str) -> str:
+    if motion_compensation not in VALID_MOTION_COMPENSATIONS:
+        valid = ", ".join(sorted(VALID_MOTION_COMPENSATIONS))
+        raise ValueError(
+            "Unsupported motion_compensation "
+            f"{motion_compensation!r}; expected one of: {valid}"
+        )
+    return motion_compensation
 
 
 # --- camera/projection helpers for FEATURE_MODE_INTENSITY_RGB_FRONT ---

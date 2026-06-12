@@ -47,3 +47,17 @@ Each step is from the agreed first-tasks list. "Done when" describes the gate.
 | 10 | 1-2 epoch tiny training smoke | pending | -- |
 
 Only after step 10 passes should E0 launch a full training run.
+
+## Training Runner Note
+
+E0 currently uses `tools/train_milestone_d.py` because that runner already
+contains the AdamW, ReduceLROnPlateau, checkpoint, resume, and metric plumbing
+needed for the road-marking task. For Milestone E launches, pass:
+
+```bash
+--config logs/milestone_e/configs/e0_rgb_front.yml \
+--runs-dir logs/milestone_e/runs
+```
+
+The runner also infers `logs/milestone_e/runs` for configs under
+`logs/milestone_e`, but the explicit flag is preferred in launch commands.

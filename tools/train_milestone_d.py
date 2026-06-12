@@ -781,6 +781,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--run-name", required=True)
     parser.add_argument(
+        "--runs-dir",
+        type=Path,
+        help=(
+            "Directory that contains run folders. Defaults to logs/milestone_d/runs, "
+            "except configs under logs/milestone_e infer logs/milestone_e/runs."
+        ),
+    )
+    parser.add_argument(
         "--epochs",
         type=int,
         default=25,
@@ -834,8 +842,29 @@ def set_seeds(seed: int) -> None:
         print(f"determinism_warning {exc}")
 
 
-def prepare_run_dir(run_name: str, force: bool, resume: bool) -> Path:
-    run_dir = RUNS_DIR / run_name
+def resolve_runs_dir(args: argparse.Namespace) -> Path:
+    if args.runs_dir is not None:
+        runs_dir = args.runs_dir
+        if not runs_dir.is_absolute():
+            runs_dir = PROJECT_ROOT / runs_dir
+        return runs_dir
+
+    config_path = args.config
+    if not config_path.is_absolute():
+        config_path = PROJECT_ROOT / config_path
+    try:
+        rel_parts = config_path.resolve().relative_to(PROJECT_ROOT).parts
+    except ValueError:
+        rel_parts = config_path.parts
+
+    if len(rel_parts) >= 3 and rel_parts[0] == "logs" and rel_parts[1] == "milestone_e":
+        return PROJECT_ROOT / "logs/milestone_e/runs"
+
+    return RUNS_DIR
+
+
+def prepare_run_dir(run_name: str, force: bool, resume: bool, runs_dir: Path) -> Path:
+    run_dir = runs_dir / run_name
     if resume:
         if not run_dir.exists():
             raise SystemExit(f"Cannot resume missing run directory: {run_dir}")
@@ -902,6 +931,21 @@ def load_config(args: argparse.Namespace, run_dir: Path) -> dict:
     cfg["pipeline"]["main_log_dir"] = str(run_dir / "open3d_logs")
     cfg["pipeline"]["train_sum_dir"] = str(run_dir / "tensorboard")
     cfg["pipeline"].pop("real_training_allowed", None)
+    feature_mode = str(cfg.get("dataset", {}).get("feature_mode", "intensity"))
+    if feature_mode != "intensity" and "grid_size" in cfg.get("model", {}):
+        model_grid_size = float(cfg["model"]["grid_size"])
+        explicit_cache_grid_size = cfg["dataset"].get("cache_grid_size")
+        if (
+            explicit_cache_grid_size is not None
+            and float(explicit_cache_grid_size) != model_grid_size
+        ):
+            raise SystemExit(
+                "dataset.cache_grid_size must match model.grid_size for RGB cache "
+                "safety: "
+                f"cache_grid_size={explicit_cache_grid_size!r}, "
+                f"model.grid_size={model_grid_size!r}"
+            )
+        cfg["dataset"]["cache_grid_size"] = model_grid_size
     if args.steps_per_epoch_train is not None:
         cfg["dataset"]["steps_per_epoch_train"] = args.steps_per_epoch_train
     if args.steps_per_epoch_valid is not None:
@@ -1017,7 +1061,8 @@ def main() -> None:
     if args.save_ckpt_freq < 1:
         raise SystemExit("--save-ckpt-freq must be >= 1")
     resume_requested = args.resume_from is not None or args.resume_latest
-    run_dir = prepare_run_dir(args.run_name, args.force, resume_requested)
+    runs_dir = resolve_runs_dir(args)
+    run_dir = prepare_run_dir(args.run_name, args.force, resume_requested, runs_dir)
     resume_checkpoint = resolve_resume_checkpoint(args, run_dir)
     stdout_path = run_dir / "stdout.log"
 
@@ -1028,6 +1073,7 @@ def main() -> None:
             set_seeds(args.seed)
             cfg = load_config(args, run_dir)
             write_start_artifacts(args, cfg, run_dir, resume_checkpoint)
+            print(f"runs_dir {runs_dir}")
             print(f"run_dir {run_dir}")
             print(f"requested_epochs {args.epochs}")
             print(f"resume_checkpoint {resume_checkpoint}")

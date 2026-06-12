@@ -55,5 +55,15 @@
       "n_valid": 33530,
       "valid_ratio": 0.85750089509488
     }
+  },
+  "invalid_timestamp_path": {
+    "seq": "054",
+    "frame": 0,
+    "feat_shape": [
+      69141,
+      5
+    ],
+    "rgb_valid_ratio": 0.0,
+    "rgb_max": 0.0
   }
 }

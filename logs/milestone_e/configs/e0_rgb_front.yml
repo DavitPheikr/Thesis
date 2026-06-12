@@ -10,6 +10,7 @@ dataset:
   motion_compensation: none
   dataset_path:
   cache_dir: logs/milestone_e/cache/E0_rgb_front_v1
+  cache_grid_size: 0.04
   use_cache: true
   class_weights:
     - 119562394.0

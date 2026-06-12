@@ -150,11 +150,6 @@ rgb_valid[kept_indices] = 1
 return rgb, rgb_valid
 ```
 
-Open choices left for step 7 (voxel-subsampling policy) and step 8
-(cache versioning):
-
-- nearest vs bilinear pixel sampling (recommend bilinear)
-- whether to keep RGB averaging restricted to valid contributors after
-  voxelization, or pass the fractional flag through unchanged.
-
-Those decisions do not change anything in this file.
+Step 7 and step 8 are now pinned in
+[`cache_policy.md`](cache_policy.md): E0 uses bilinear sampling and passes
+the fractional `rgb_valid` feature through after voxel subsampling.

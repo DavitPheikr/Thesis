@@ -53,6 +53,8 @@ PNG_PATH = OUT_DIR / "smoke_overlay.png"
 
 SMOKE_SEQ = "003"
 SMOKE_FRAME = 0
+INVALID_SEQ = "054"
+INVALID_FRAME = 0
 
 
 def fmt(arr):
@@ -196,6 +198,38 @@ def main():
                   f"valid_ratio={st['valid_ratio']:.4f}")
     print(f"  elapsed={time.time()-t0:.1f}s")
 
+    print("\n=== E0 invalid timestamp path ===", flush=True)
+    t0 = time.time()
+    invalid_sample = ds_e0._load_sample(INVALID_SEQ, INVALID_FRAME)
+    invalid_feat = invalid_sample["feat"]
+    invalid_rgb = invalid_feat[:, 1:4]
+    invalid_rgb_valid = invalid_feat[:, 4]
+    assert invalid_feat.shape[1] == 5, (
+        "Invalid timestamp sample still needs the E0 feature layout; "
+        f"got {invalid_feat.shape}"
+    )
+    assert np.allclose(invalid_rgb, 0.0), (
+        "Expected all RGB values to be zero when the nearest camera frame "
+        "exceeds rgb_max_dt_s."
+    )
+    assert np.all(invalid_rgb_valid == 0.0), (
+        "Expected rgb_valid to be all zero when the nearest camera frame "
+        "exceeds rgb_max_dt_s."
+    )
+    invalid_report = {
+        "seq": INVALID_SEQ,
+        "frame": INVALID_FRAME,
+        "feat_shape": list(invalid_feat.shape),
+        "rgb_valid_ratio": float(invalid_rgb_valid.mean()),
+        "rgb_max": float(invalid_rgb.max()) if invalid_rgb.size else None,
+    }
+    print(
+        f"  {INVALID_SEQ}/{INVALID_FRAME:02d}: "
+        f"rgb_valid_ratio={invalid_report['rgb_valid_ratio']:.4f} "
+        f"rgb_max={invalid_report['rgb_max']:.4f} "
+        f"elapsed={time.time()-t0:.1f}s"
+    )
+
     print("\n=== Rendering overlay ===", flush=True)
     render_overlay(ds_e0, sample_e0, PNG_PATH)
     print(f"  wrote {PNG_PATH}")
@@ -214,6 +248,7 @@ def main():
         "rgb_valid_ratio": float(rgb_valid.mean()),
         "rgb_valid_unique_pre_voxel": [float(x) for x in unique_flag.tolist()],
         "per_class": class_stats,
+        "invalid_timestamp_path": invalid_report,
     }
     REPORT_PATH.write_text(json.dumps(report, indent=2))
     print(f"  wrote {REPORT_PATH}")

@@ -13,7 +13,7 @@ step has to pass before we move on.
 | 3 | train/017/40 | same-index | middle frame, dynamic scene |
 | 4 | train/037/52 | same-index | Codex-audited |
 | 5 | val/054/0 | same-index | dt drift +0.45 s -- this overlay should look misaligned on moving objects |
-| 6 | val/054/0 | nearest-timestamp | same lidar frame, camera frame chosen by timestamp -- should look fine |
+| 6 | val/054/0 | nearest-timestamp | same lidar frame; nearest camera is still ~0.45 s away, so final E0 policy invalidates RGB for this frame |
 | 7 | val/054/79 | same-index | end of seq 054, dt back to -50 ms -- should look fine |
 | 8 | val/106/20 | same-index | another val sequence for diversity |
 
@@ -41,9 +41,10 @@ For each PNG:
   in the image, not offset.
 - No systematic shift of points toward one image corner (would indicate lens
   distortion not being accounted for).
-- For frame 5 (val/054/0 same-index), expect to see visible misalignment on
-  moving objects. For frame 6 (same lidar, nearest-timestamp camera) the
-  same scene should look much better.
+- For frames 5 and 6 (`val/054/0`), the closest available camera timestamp
+  is still about 0.45 s away. These overlays are useful as a drift example,
+  but final E0 training should mark this lidar frame as `rgb_valid=0` for all
+  points under the 60 ms timestamp policy.
 
 If any of frames 1-4, 7, or 8 look misaligned, stop. Do not proceed to step 4
 until the cause is understood and fixed.
