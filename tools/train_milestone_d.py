@@ -790,8 +790,8 @@ def parse_args(
         type=Path,
         help=(
             "Directory that contains run folders. Defaults to "
-            f"{default_runs_dir.relative_to(PROJECT_ROOT)}, except configs under "
-            "logs/milestone_e infer logs/milestone_e/runs."
+            f"{default_runs_dir.relative_to(PROJECT_ROOT)}, except a config under "
+            "logs/milestone_<x> infers logs/milestone_<x>/runs."
         ),
     )
     parser.add_argument(
@@ -866,8 +866,8 @@ def resolve_runs_dir(
     except ValueError:
         rel_parts = config_path.parts
 
-    if len(rel_parts) >= 3 and rel_parts[0] == "logs" and rel_parts[1] == "milestone_e":
-        return PROJECT_ROOT / "logs/milestone_e/runs"
+    if len(rel_parts) >= 3 and rel_parts[0] == "logs" and rel_parts[1].startswith("milestone_"):
+        return PROJECT_ROOT / "logs" / rel_parts[1] / "runs"
 
     return default_runs_dir
 
