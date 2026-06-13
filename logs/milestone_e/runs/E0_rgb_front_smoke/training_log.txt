@@ -1,0 +1,1 @@
+epoch=1 open3d_epoch=0 wall_clock_seconds=28.650 peak_gpu_memory_bytes=478189056 lr=0.0014

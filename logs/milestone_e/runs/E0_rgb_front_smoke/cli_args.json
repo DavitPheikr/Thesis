@@ -1,0 +1,16 @@
+{
+  "config": "logs/milestone_e/configs/e0_rgb_front.yml",
+  "run_name": "E0_rgb_front_smoke",
+  "runs_dir": "logs/milestone_e/runs",
+  "epochs": 1,
+  "seed": 42,
+  "steps_per_epoch_train": 20,
+  "steps_per_epoch_valid": 10,
+  "save_ckpt_freq": 1,
+  "device": null,
+  "pin_memory": null,
+  "no_cache": true,
+  "force": true,
+  "resume_from": null,
+  "resume_latest": false
+}

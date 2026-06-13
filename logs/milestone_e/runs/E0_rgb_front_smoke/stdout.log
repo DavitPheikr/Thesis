@@ -1,0 +1,41 @@
+runs_dir /home/coder/project/logs/milestone_e/runs
+run_dir /home/coder/project/logs/milestone_e/runs/E0_rgb_front_smoke
+requested_epochs 1
+resume_checkpoint None
+build_dataset_start
+build_dataset_done
+build_model_start
+build_model_done
+build_pipeline_start
+run_train_start
+run_train_seed_start
+run_train_seed_done
+run_train_model_to_device_start
+run_train_model_to_device_done
+run_train_loss_metric_batcher_start
+run_train_loss_metric_batcher_done
+run_train_train_split_start
+run_train_train_split_done
+run_train_train_loader_start
+run_train_train_loader_done
+run_train_valid_split_start
+run_train_valid_split_done
+run_train_valid_loader_start
+run_train_valid_loader_done
+run_train_optimizer_start
+optimizer_scheduler optimizer=AdamW lr=0.0014 weight_decay=0.0001 scheduler=ReduceLROnPlateau watch_metric=marking_iou smoothing_window=3
+run_train_optimizer_done
+run_train_resume_start
+resume_checkpoint none
+run_train_resume_done
+run_train_tensorboard_start
+run_train_tensorboard_done
+run_train_save_config_start
+run_train_save_config_done
+epoch_start 0
+training:   0%|          | 0/10 [00:00<?, ?it/s]training:  10%|#         | 1/10 [00:03<00:29,  3.26s/it]training:  20%|##        | 2/10 [00:05<00:20,  2.53s/it]training:  30%|###       | 3/10 [00:06<00:14,  2.14s/it]training:  40%|####      | 4/10 [00:08<00:11,  1.91s/it]training:  50%|#####     | 5/10 [00:10<00:08,  1.79s/it]training:  60%|######    | 6/10 [00:11<00:07,  1.76s/it]training:  70%|#######   | 7/10 [00:13<00:05,  1.70s/it]training:  80%|########  | 8/10 [00:14<00:03,  1.67s/it]training:  90%|######### | 9/10 [00:16<00:01,  1.66s/it]training: 100%|##########| 10/10 [00:18<00:00,  1.65s/it]training: 100%|##########| 10/10 [00:18<00:00,  1.82s/it]
+validation:   0%|          | 0/5 [00:00<?, ?it/s]validation:  20%|##        | 1/5 [00:01<00:06,  1.50s/it]validation:  40%|####      | 2/5 [00:03<00:04,  1.54s/it]validation:  60%|######    | 3/5 [00:04<00:02,  1.49s/it]validation:  80%|########  | 4/5 [00:05<00:01,  1.48s/it]validation: 100%|##########| 5/5 [00:07<00:00,  1.46s/it]validation: 100%|##########| 5/5 [00:07<00:00,  1.48s/it]
+scheduler_step type=ReduceLROnPlateau watch_metric=marking_iou raw_value=0.0151621552605 smoothing_window=3 value=0.0151621552605 lr_before=0.0014 lr_after=0.0014
+saved_checkpoint /home/coder/project/logs/milestone_e/runs/E0_rgb_front_smoke/checkpoints/ckpt_epoch_00001.pth
+run_train_done
+milestone_d_run_complete: run_name=E0_rgb_front_smoke epochs=1 wall_clock=28.907
