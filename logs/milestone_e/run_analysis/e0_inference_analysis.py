@@ -1,214 +1,201 @@
 #!/usr/bin/env python
-"""Milestone E: E0 inference analysis with rgb_valid stratification.
+"""Milestone E0 RGB-valid coverage analysis for the validation split.
 
-Loads E0 checkpoint at epoch 14, runs validation inference, computes metrics
-stratified by rgb_valid (valid RGB vs invalid RGB).
-
-Key diagnostic: Are false positives concentrated on rgb_valid=1 frames?
-If yes: RGB is being used and over-amplified (E1 should soften marking weight).
-If no: Invalid-RGB handling is problematic (E1 should improve invalid-RGB policy).
+This script does not run model inference despite the historical file name. It
+loads the E0 dataset feature path and summarizes where RGB is valid/invalid in
+the validation split. It is a preparatory diagnostic for the later sampled
+checkpoint inference analysis.
 
 Outputs:
-- rgb_valid_stratified_metrics.csv (metrics split by valid/invalid RGB)
-- per_sequence_rgb_valid_metrics.csv (per-seq breakdown)
-- sampled_error_analysis/ (false positives colored by rgb_valid)
+    logs/milestone_e/run_analysis/E0_rgb_front_v1/frame_rgb_valid_stats.csv
+    logs/milestone_e/run_analysis/E0_rgb_front_v1/per_sequence_rgb_valid_metrics.csv
+    logs/milestone_e/run_analysis/E0_rgb_front_v1/rgb_valid_stratification_summary.md
 """
+
 from __future__ import annotations
 
-import json
 import sys
 import time
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn.functional as F
+
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(REPO_ROOT / "src"))
+PATCHED_DEVKIT = REPO_ROOT / "pandaset-devkit/python"
+SRC_DIR = REPO_ROOT / "src"
+sys.path.insert(0, str(SRC_DIR))
+sys.path.insert(0, str(PATCHED_DEVKIT))
 
-from thesis_pipeline.datasets.pandaset_ff_lane3_dataset import (
+from thesis_pipeline.datasets.pandaset_ff_lane3_dataset import (  # noqa: E402
     PandaSetFFLane3Dataset,
 )
 
+
 OUT_DIR = Path(__file__).resolve().parent / "E0_rgb_front_v1"
-OUT_DIR.mkdir(parents=True, exist_ok=True)
-
-E0_RUN_DIR = REPO_ROOT / "logs/milestone_e/runs/E0_rgb_front_v1"
-E0_CONFIG = REPO_ROOT / "logs/milestone_e/configs/e0_rgb_front.yml"
-E0_EPOCH = 14
-
-SPLIT = "val"
+CLASS_NAMES = {1: "road", 2: "marking", 3: "other"}
 
 
-def load_checkpoint(checkpoint_path: Path, device: str = "cuda"):
-    """Load E0 checkpoint state_dict."""
-    if not checkpoint_path.exists():
-        raise FileNotFoundError(f"Missing checkpoint: {checkpoint_path}")
-    ckpt = torch.load(checkpoint_path, map_location=device)
-    return ckpt
+def main() -> None:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-
-def load_model_and_config():
-    """Load model architecture and config for E0."""
-    import yaml
-    from open3d_ml.ml3d.models import RandLANet
-    from open3d_ml.ml3d.datasets import Semantic3D
-
-    with open(E0_CONFIG) as f:
-        cfg = yaml.safe_load(f)
-
-    model_cfg = cfg["model"]
-    model = RandLANet(
-        num_neighbors=model_cfg["num_neighbors"],
-        num_layers=model_cfg["num_layers"],
-        num_points=model_cfg["num_points"],
-        num_classes=model_cfg["num_classes"],
-        in_channels=model_cfg["in_channels"],
-        dim_features=model_cfg["dim_features"],
-        dim_output=model_cfg["dim_output"],
-        grid_size=model_cfg["grid_size"],
-        ignored_label_inds=model_cfg["ignored_label_inds"],
+    print("=" * 80)
+    print("MILESTONE E0 RGB-VALID VALIDATION COVERAGE")
+    print("=" * 80)
+    print(
+        "note: this script measures dataset RGB validity only; it does not run "
+        "checkpoint inference."
     )
 
-    return model, cfg
-
-
-def main():
-    print("=" * 80)
-    print("MILESTONE E: RGB-VALID STRATIFICATION ANALYSIS")
-    print("=" * 80)
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"\nUsing device: {device}\n")
-
-    # === Load E0 dataset ===
-    print("[1/3] Loading E0 validation dataset...", flush=True)
     t0 = time.time()
-
     dataset = PandaSetFFLane3Dataset(
         dataset_path=None,
         cache_dir=str(REPO_ROOT / "logs/milestone_e/cache/E0_rgb_front_v1"),
-        use_cache=True,
+        use_cache=False,
         label_mode="road_marking3",
         feature_mode="intensity_rgb_front",
-        split=SPLIT,
+        stats_file=str(REPO_ROOT / "logs/milestone_d/road_marking3_training_statistics.json"),
+        split_dir=str(REPO_ROOT / "configs/splits"),
+        dataset_root_file=str(REPO_ROOT / "logs/dataset_root.txt"),
+        preflight_pattern_file=str(
+            REPO_ROOT / "logs/milestone_b_preflight_sensor_pattern.txt"
+        ),
+        sampler={"name": "SemSegRandomSampler"},
     )
+    split = dataset.get_split("validation")
+    print(f"validation_frames {len(split)}")
 
-    print(f"  Loaded {len(dataset)} samples in {time.time()-t0:.1f}s")
+    rows: list[dict[str, int | float | str]] = []
+    for idx in range(len(split)):
+        attr = split.get_attr(idx)
+        sample = split.get_data(idx)
+        feat = sample["feat"]
+        labels = sample["label"]
+        if feat.ndim != 2 or feat.shape[1] != 5:
+            raise ValueError(
+                f"Expected E0 feature shape (N, 5), got {feat.shape} for {attr}"
+            )
 
-    # === Collect per-frame rgb_valid statistics ===
-    print("\n[2/3] Computing per-frame rgb_valid statistics...", flush=True)
+        rgb_valid = feat[:, 4]
+        valid = rgb_valid > 0.5
+        seq_id = str(attr["seq_id"])
+        frame_idx = int(attr["frame_idx"])
+        total = int(rgb_valid.size)
+        valid_count = int(valid.sum())
 
-    frame_stats = []
-
-    for seq_id in sorted(dataset.dataset_split.keys()):
-        n_frames = len(dataset.dataset_split[seq_id])
-
-        for frame_idx in range(n_frames):
-            sample = dataset._load_sample(seq_id, frame_idx)
-            feat = sample["feat"]  # (N, 5) after voxelization
-            label = sample["label"]  # (N,)
-
-            rgb_valid = feat[:, 4]
-            valid_mask = rgb_valid > 0.5
-
-            n_total = len(rgb_valid)
-            n_valid = valid_mask.sum()
-            n_invalid = (~valid_mask).sum()
-
-            valid_ratio = (n_valid / n_total) if n_total > 0 else 0
-
-            # Per-class counts
-            for class_id in [1, 2, 3]:
-                class_mask = label == class_id
-                n_class_valid = (class_mask & valid_mask).sum()
-                n_class_invalid = (class_mask & ~valid_mask).sum()
-
-                frame_stats.append({
+        for class_id, class_name in CLASS_NAMES.items():
+            class_mask = labels == class_id
+            class_total = int(class_mask.sum())
+            class_valid = int((class_mask & valid).sum())
+            rows.append(
+                {
                     "seq_id": seq_id,
                     "frame_idx": frame_idx,
-                    "class": ["road", "marking", "other"][class_id - 1],
                     "class_id": class_id,
-                    "n_total_points": n_total,
-                    "n_valid_rgb": int(n_valid),
-                    "n_invalid_rgb": int(n_invalid),
-                    "valid_ratio": valid_ratio,
-                    "n_class_points": int(class_mask.sum()),
-                    "n_class_valid_rgb": int(n_class_valid),
-                    "n_class_invalid_rgb": int(n_class_invalid),
-                })
+                    "class_name": class_name,
+                    "frame_total_points": total,
+                    "frame_valid_rgb_points": valid_count,
+                    "frame_valid_ratio": float(valid_count / total) if total else 0.0,
+                    "class_total_points": class_total,
+                    "class_valid_rgb_points": class_valid,
+                    "class_invalid_rgb_points": class_total - class_valid,
+                    "class_valid_ratio": (
+                        float(class_valid / class_total) if class_total else np.nan
+                    ),
+                }
+            )
 
-    frame_df = pd.DataFrame(frame_stats)
-    frame_csv = OUT_DIR / "frame_rgb_valid_stats.csv"
-    frame_df.to_csv(frame_csv, index=False)
-    print(f"  → {frame_csv}")
+    frame_df = pd.DataFrame(rows)
+    frame_path = OUT_DIR / "frame_rgb_valid_stats.csv"
+    frame_df.to_csv(frame_path, index=False)
 
-    # Aggregate per-sequence
-    seq_agg = frame_df.groupby("seq_id").agg({
-        "valid_ratio": ["mean", "min", "max"],
-        "n_total_points": "mean",
-    })
-    seq_csv = OUT_DIR / "per_sequence_rgb_valid_metrics.csv"
-    seq_agg.to_csv(seq_csv)
-    print(f"  → {seq_csv}")
-
-    # === Write summary ===
-    print("\n[3/3] Writing summary report...", flush=True)
+    seq_rows = []
+    for (seq_id, class_name), group in frame_df.groupby(["seq_id", "class_name"]):
+        class_total = int(group["class_total_points"].sum())
+        class_valid = int(group["class_valid_rgb_points"].sum())
+        seq_rows.append(
+            {
+                "seq_id": seq_id,
+                "class_name": class_name,
+                "frames": int(group["frame_idx"].nunique()),
+                "mean_frame_valid_ratio": float(group["frame_valid_ratio"].mean()),
+                "min_frame_valid_ratio": float(group["frame_valid_ratio"].min()),
+                "max_frame_valid_ratio": float(group["frame_valid_ratio"].max()),
+                "class_total_points": class_total,
+                "class_valid_rgb_points": class_valid,
+                "class_valid_ratio": (
+                    float(class_valid / class_total) if class_total else np.nan
+                ),
+            }
+        )
+    seq_df = pd.DataFrame(seq_rows)
+    seq_path = OUT_DIR / "per_sequence_rgb_valid_metrics.csv"
+    seq_df.to_csv(seq_path, index=False)
 
     summary_path = OUT_DIR / "rgb_valid_stratification_summary.md"
-    with open(summary_path, "w") as f:
-        f.write("# RGB-Valid Stratification Analysis\n\n")
+    marking = frame_df[frame_df["class_name"] == "marking"]
+    lines = [
+        "# E0 RGB-Valid Coverage Summary",
+        "",
+        "This is a dataset coverage diagnostic, not a checkpoint inference report.",
+        "It tells us where E0 had RGB available in the validation split.",
+        "",
+        f"- validation frames: `{len(split)}`",
+        f"- generated in: `{time.time() - t0:.1f}s`",
+        "",
+        "## Overall by Class",
+        "",
+        "| class | total points | valid RGB points | valid ratio |",
+        "| --- | ---: | ---: | ---: |",
+    ]
+    for class_name in ("road", "marking", "other"):
+        g = frame_df[frame_df["class_name"] == class_name]
+        total = int(g["class_total_points"].sum())
+        valid_count = int(g["class_valid_rgb_points"].sum())
+        ratio = float(valid_count / total) if total else float("nan")
+        lines.append(f"| {class_name} | {total} | {valid_count} | {ratio:.6f} |")
 
-        f.write("## Overall RGB-Valid Coverage\n\n")
-        overall_mean = frame_df["valid_ratio"].mean()
-        overall_min = frame_df["valid_ratio"].min()
-        overall_max = frame_df["valid_ratio"].max()
+    lines.extend(
+        [
+            "",
+            "## Sequences With Low Marking RGB Coverage",
+            "",
+            "| sequence | marking points | marking valid ratio | mean frame valid ratio |",
+            "| --- | ---: | ---: | ---: |",
+        ]
+    )
+    low_marking = seq_df[
+        (seq_df["class_name"] == "marking") & (seq_df["class_valid_ratio"] < 0.6)
+    ].sort_values("class_valid_ratio")
+    if low_marking.empty:
+        lines.append("| none | 0 | n/a | n/a |")
+    else:
+        for _, row in low_marking.iterrows():
+            lines.append(
+                f"| {row['seq_id']} | {int(row['class_total_points'])} | "
+                f"{row['class_valid_ratio']:.6f} | "
+                f"{row['mean_frame_valid_ratio']:.6f} |"
+            )
 
-        f.write(f"- **Mean valid ratio (across all val frames):** {overall_mean:.4f}\n")
-        f.write(f"- **Min valid ratio:** {overall_min:.4f}\n")
-        f.write(f"- **Max valid ratio:** {overall_max:.4f}\n\n")
+    lines.extend(
+        [
+            "",
+            "## Interpretation Boundary",
+            "",
+            "This script can identify low-RGB-coverage sequences, but it cannot answer",
+            "whether E0 false positives occur mostly where `rgb_valid=1` or",
+            "`rgb_valid=0`. That requires a fresh sampled inference pass with the",
+            "epoch-14 checkpoint.",
+            "",
+        ]
+    )
+    summary_path.write_text("\n".join(lines))
 
-        f.write("## Per-Sequence Valid Ratio\n\n")
-        f.write("| sequence | mean_valid_ratio | min | max |\n")
-        f.write("| --- | ---: | ---: | ---: |\n")
-
-        seq_summary = seq_agg["valid_ratio"].sort_index()
-        for seq_id in seq_summary.index:
-            mean_val = seq_summary.loc[seq_id, "mean"]
-            min_val = seq_summary.loc[seq_id, "min"]
-            max_val = seq_summary.loc[seq_id, "max"]
-            f.write(f"| {seq_id} | {mean_val:.4f} | {min_val:.4f} | {max_val:.4f} |\n")
-
-        f.write("\n## Class-Wise RGB-Valid Coverage\n\n")
-        f.write("Average valid RGB ratio per class:\n\n")
-        f.write("| class | avg_n_points | avg_n_valid_rgb | avg_valid_ratio |\n")
-        f.write("| --- | ---: | ---: | ---: |\n")
-
-        for class_name in ["road", "marking", "other"]:
-            class_data = frame_df[frame_df["class"] == class_name]
-            avg_points = class_data["n_class_points"].mean()
-            avg_valid = class_data["n_class_valid_rgb"].mean()
-            avg_ratio = class_data["n_class_valid_rgb"].sum() / class_data["n_class_points"].sum()
-
-            f.write(f"| {class_name} | {avg_points:.0f} | {avg_valid:.0f} | {avg_ratio:.4f} |\n")
-
-        f.write("\n## Critical Observations\n\n")
-        f.write("**Key diagnostic questions to answer with full inference:\n\n")
-        f.write("1. Are E0 false positives (road→marking) concentrated on rgb_valid=1 frames?\n")
-        f.write("   - YES: RGB is being used and over-amplified by marking weight → E1 soften weight\n")
-        f.write("   - NO: Invalid-RGB handling is problematic → E1 improve invalid-RGB policy\n\n")
-        f.write("2. Did E0 improve marking→road corrections on rgb_valid=1 frames?\n")
-        f.write("   - YES: RGB is helping semantically, just with wrong class weight\n")
-        f.write("   - NO: RGB signal quality or projection is suspect\n\n")
-        f.write("3. Do raw 8/9/10 subtypes respond uniformly to RGB?\n")
-        f.write("   - YES: RGB provides consistent signal across marking types\n")
-        f.write("   - NO: Some marking types may have weak/invalid RGB in dataset\n\n")
-
-    print(f"  → {summary_path}")
-    print("\nAnalysis complete!")
-    print(f"\nOutputs in: {OUT_DIR}/")
+    print(f"wrote {frame_path}")
+    print(f"wrote {seq_path}")
+    print(f"wrote {summary_path}")
+    print(f"marking_mean_frame_valid_ratio {marking['class_valid_ratio'].mean():.6f}")
 
 
 if __name__ == "__main__":
