@@ -1,0 +1,10 @@
+true_class,pred_class,error_type,e0_count,d0_count,delta_e0_minus_d0
+road,road,road->road,9182801,9293429,-110628
+road,marking,road->marking,363006,249846,113160
+road,other,road->other,65832,89930,-24098
+marking,road,marking->road,51945,95638,-43693
+marking,marking,marking->marking,341945,295065,46880
+marking,other,marking->other,888,1339,-451
+other,road,other->road,236965,261710,-24745
+other,marking,other->marking,22130,28267,-6137
+other,other,other->other,13267813,13221486,46327

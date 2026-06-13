@@ -1,0 +1,89 @@
+{
+  "generated_at": "2026-06-13T17:31:04",
+  "script": "logs/milestone_e/run_analysis/e0_sampled_error_analysis.py",
+  "config": "/home/coder/project/logs/milestone_e/configs/e0_rgb_front.yml",
+  "checkpoint": "/home/coder/project/logs/milestone_e/runs/E0_rgb_front_v1/checkpoints/ckpt_epoch_00014.pth",
+  "checkpoint_epoch": 14,
+  "split": "validation",
+  "steps": 2160,
+  "seed": 42,
+  "device": "cuda",
+  "rgb_valid_threshold": 0.5,
+  "note": "Fresh sampled inference pass; not exact original E0 epoch-14 validation sample.",
+  "class_order": {
+    "0": "road",
+    "1": "marking",
+    "2": "other"
+  },
+  "raw_remap_alignment": {
+    "checked_points": 70609605,
+    "mismatched_points": 0,
+    "mismatch_rate": 0.0,
+    "threshold": 0.001
+  },
+  "sampled_metrics": {
+    "active_points": 70609605,
+    "true_marking": 1150938,
+    "predicted_marking": 2112182,
+    "marking_tp": 992129,
+    "marking_fp": 1120053,
+    "marking_fn": 158809,
+    "marking_iou": 0.4368705115960389,
+    "marking_precision": 0.4697175716865308,
+    "marking_recall": 0.862017762902954,
+    "marking_f1": 0.6080861261614651,
+    "predicted_true_marking_ratio": 1.8351831288913911,
+    "road_to_marking": 1055189,
+    "marking_to_road": 155521,
+    "other_to_marking": 64864
+  },
+  "rgb_valid_metrics": {
+    "active_points": 57677257,
+    "true_marking": 901965,
+    "predicted_marking": 1753188,
+    "marking_tp": 787622,
+    "marking_fp": 965566,
+    "marking_fn": 114343,
+    "marking_iou": 0.4217450741112196,
+    "marking_precision": 0.44925130676230957,
+    "marking_recall": 0.8732290055600828,
+    "marking_f1": 0.5932780521499138,
+    "predicted_true_marking_ratio": 1.9437428281585205,
+    "road_to_marking": 909871,
+    "marking_to_road": 111732,
+    "other_to_marking": 55695
+  },
+  "rgb_invalid_metrics": {
+    "active_points": 12932348,
+    "true_marking": 248973,
+    "predicted_marking": 358994,
+    "marking_tp": 204507,
+    "marking_fp": 154487,
+    "marking_fn": 44466,
+    "marking_iou": 0.5068829623754524,
+    "marking_precision": 0.5696669025109055,
+    "marking_recall": 0.8214023207335736,
+    "marking_f1": 0.6727569095033119,
+    "predicted_true_marking_ratio": 1.4418993224164869,
+    "road_to_marking": 145318,
+    "marking_to_road": 43789,
+    "other_to_marking": 9169
+  },
+  "confusion_matrix": [
+    [
+      27105304,
+      1055189,
+      185981
+    ],
+    [
+      155521,
+      992129,
+      3288
+    ],
+    [
+      680698,
+      64864,
+      40366631
+    ]
+  ]
+}
