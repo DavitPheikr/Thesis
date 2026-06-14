@@ -49,6 +49,34 @@ All outputs are written under:
 logs/milestone_g/run_analysis/G0_rgb_lovasz/
 ```
 
+## RGB-shortcut fingerprint (cross-run, analysis-only)
+
+`rgb_shortcut_fingerprint.py` tests whether residual road->marking false
+positives are associated with RGB **brightness/luminance** rather than a specific
+marking **color**. It reuses the existing `group_feature_summary.csv` and
+`rgb_valid_stratified_metrics.csv` (no inference, no training change). Linear
+metrics (brightness, luminance, warmth, per-channel means) are exact group means;
+`saturation_proxy`/max/min are flagged aggregate approximations; the
+brightness-vs-intensity scatter is group-level (per-point arrays are not saved).
+
+Wording discipline: results are phrased as evidence predictions are *associated
+with* a luminance-based RGB shortcut, never as proof the model internally uses
+brightness.
+
+```bash
+# F0 now (reuses committed F0 sampled outputs):
+python logs/milestone_g/run_analysis/analysis_code/rgb_shortcut_fingerprint.py --preset f0
+# G0 after it finishes:
+python logs/milestone_g/run_analysis/analysis_code/rgb_shortcut_fingerprint.py --preset g0
+# F0-vs-G0 symptom-vs-mechanism comparison:
+python logs/milestone_g/run_analysis/analysis_code/rgb_shortcut_fingerprint.py --preset f0_vs_g0
+```
+
+Outputs per run go to `<run_analysis>/<RUN>/rgb_shortcut_analysis/`
+(`rgb_shortcut_fingerprint.csv`, `rgb_shortcut_questions.json`,
+`rgb_shortcut_conclusions.md`, `plots/`). Compare mode adds
+`rgb_shortcut_compare.csv/.png` and `rgb_shortcut_compare_conclusions.md`.
+
 ## Loss-comparison rule (important)
 
 For G0, `eval_history` `train_loss`/`val_loss` are the **TOTAL** loss
