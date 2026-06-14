@@ -53,6 +53,7 @@ from open3d._ml3d.torch.pipelines import SemanticSegmentation
 from open3d._ml3d.utils import get_runid
 
 from datasets.pandaset_ff_lane3 import PandaSetFFLane3Dataset
+from thesis_pipeline.losses import build_loss
 from thesis_pipeline.eval.milestone_c_metrics import (
     EVAL_CSV_COLUMNS,
     compute_metrics,
@@ -230,7 +231,7 @@ class MilestoneDPipeline(SemanticSegmentation):
         print("run_train_model_to_device_done", flush=True)
 
         print("run_train_loss_metric_batcher_start", flush=True)
-        loss_fn = SemSegLoss(self, model, dataset, device)
+        loss_fn = build_loss(self, model, dataset, device, self.cfg.get("loss"))
         self.metric_train = SemSegMetric()
         self.metric_val = SemSegMetric()
         self.batcher = self.get_batcher(device)
@@ -328,6 +329,9 @@ class MilestoneDPipeline(SemanticSegmentation):
             self.metric_train.reset()
             self.metric_val.reset()
             self.losses = []
+            # Combined-loss component accumulators (stay empty for stock CE).
+            self.ce_losses = []
+            self.lovasz_losses = []
             model.trans_point_sampler = train_sampler.get_point_sampler()
 
             for step, inputs in enumerate(tqdm(train_loader, desc="training")):
@@ -350,6 +354,9 @@ class MilestoneDPipeline(SemanticSegmentation):
                 self.optimizer.step()
                 self.metric_train.update(predict_scores, gt_labels)
                 self.losses.append(loss.cpu().item())
+                if getattr(loss_fn, "last_ce", None) is not None:
+                    self.ce_losses.append(loss_fn.last_ce)
+                    self.lovasz_losses.append(loss_fn.last_lovasz)
 
                 if "train" in record_summary and step == 0:
                     self.summary["train"] = self.get_3d_summary(
@@ -577,6 +584,8 @@ class MilestoneDPipeline(SemanticSegmentation):
         device = self.device
         model.eval()
         self.valid_losses = []
+        self.val_ce_losses = []
+        self.val_lovasz_losses = []
         self._val_y_true = []
         self._val_y_pred = []
         self._val_ranges = []
@@ -602,6 +611,9 @@ class MilestoneDPipeline(SemanticSegmentation):
 
                     self.metric_val.update(predict_scores, gt_labels)
                     self.valid_losses.append(loss.cpu().item())
+                    if getattr(loss_fn, "last_ce", None) is not None:
+                        self.val_ce_losses.append(loss_fn.last_ce)
+                        self.val_lovasz_losses.append(loss_fn.last_lovasz)
                     self._accumulate_validation_batch(inputs, gt_labels, predict_scores)
 
                     if "valid" in record_summary and step == 0:
@@ -731,6 +743,46 @@ class MilestoneDPipeline(SemanticSegmentation):
             self.run_dir / f"confusion_epoch_{epoch + 1:03d}.npy",
             np.asarray(metrics["confusion_matrix"], dtype=np.int64),
         )
+
+        # Optional combined-loss component logging. Only fires when a combined
+        # loss (e.g. weighted_ce_lovasz) populated per-step CE/Lovász values;
+        # stock weighted-CE runs leave these empty and write nothing, so
+        # eval_history.csv and the existing analysis stay untouched.
+        ce_losses = getattr(self, "ce_losses", [])
+        lov_losses = getattr(self, "lovasz_losses", [])
+        val_ce_losses = getattr(self, "val_ce_losses", [])
+        val_lov_losses = getattr(self, "val_lovasz_losses", [])
+        if ce_losses or val_ce_losses:
+            def _mean(xs):
+                return float(np.mean(xs)) if xs else float("nan")
+
+            comp_row = {
+                "epoch": epoch + 1,
+                "train_ce_loss": _mean(ce_losses),
+                "train_lovasz_loss": _mean(lov_losses),
+                "train_total_loss": train_loss,
+                "val_ce_loss": _mean(val_ce_losses),
+                "val_lovasz_loss": _mean(val_lov_losses),
+                "val_total_loss": val_loss,
+            }
+            comp_path = self.run_dir / "loss_components.csv"
+            write_comp_header = not comp_path.exists()
+            with comp_path.open("a", newline="") as f:
+                comp_writer = csv.DictWriter(f, fieldnames=list(comp_row.keys()))
+                if write_comp_header:
+                    comp_writer.writeheader()
+                comp_writer.writerow(comp_row)
+            print(
+                "loss_components "
+                f"epoch={epoch + 1} "
+                f"train_ce={comp_row['train_ce_loss']:.6f} "
+                f"train_lovasz={comp_row['train_lovasz_loss']:.6f} "
+                f"train_total={comp_row['train_total_loss']:.6f} "
+                f"val_ce={comp_row['val_ce_loss']:.6f} "
+                f"val_lovasz={comp_row['val_lovasz_loss']:.6f} "
+                f"val_total={comp_row['val_total_loss']:.6f}",
+                flush=True,
+            )
         return row
 
     def _write_training_log_after_validation_failure(self, epoch: int) -> None:
