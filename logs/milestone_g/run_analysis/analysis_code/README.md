@@ -77,6 +77,30 @@ Outputs per run go to `<run_analysis>/<RUN>/rgb_shortcut_analysis/`
 `rgb_shortcut_conclusions.md`, `plots/`). Compare mode adds
 `rgb_shortcut_compare.csv/.png` and `rgb_shortcut_compare_conclusions.md`.
 
+## Post-G0 decision diagnostics (G1 planning)
+
+Two diagnostics decide whether G0 needs a follow-up run and which one:
+
+- `scheduler_replay.py` (**zero-GPU**, runs anywhere): replays G0's observed
+  marking-IoU curve through the real PyTorch `ReduceLROnPlateau` for patience
+  6/5/4/3 (with the runner's 3-epoch metric smoothing) to find when LR would
+  drop. Writes `scheduler_replay.csv` / `.md` under the G0 run-analysis dir.
+- `g0_bias_sweep.py` (**server / GPU**): shifts the marking logit by
+  `b ∈ [-0.5..+0.5]` before argmax on the G0 best checkpoint, in a single
+  inference pass (re-argmax per bias in numpy — no re-inference). Tells us if G0
+  is well-calibrated (best `b≈0`), too conservative (positive `b` best →
+  `lambda=0.35` justified), or still overpredicting (negative `b` best). It is a
+  **diagnostic only** — a bias-tuned IoU is never reported as a result. Acts only
+  if the best bias beats `b=0` by ≥ ~0.008–0.010 IoU (single-seed noise gate).
+
+```bash
+python logs/milestone_g/run_analysis/analysis_code/scheduler_replay.py
+python logs/milestone_g/run_analysis/analysis_code/g0_bias_sweep.py --device cuda --steps 2160 --seed 42
+```
+
+Outputs: `<G0 run_analysis>/scheduler_replay.{csv,md}` and
+`<G0 run_analysis>/bias_sweep/bias_sweep_{metrics.csv,summary.md}`.
+
 ## Loss-comparison rule (important)
 
 For G0, `eval_history` `train_loss`/`val_loss` are the **TOTAL** loss
