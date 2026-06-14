@@ -1,0 +1,18 @@
+{
+  "best_epoch": 18,
+  "best_val_lovasz_share": 0.4603446045486352,
+  "mean_val_lovasz_share": 0.4476281222442065,
+  "scale_verdict": "dominant",
+  "val_lovasz_cv": 0.10303044669376851,
+  "val_ce_cv": 0.27148653119329236,
+  "stability_verdict": "stable",
+  "corr_ce_iou": -0.9104367184738983,
+  "corr_lovasz_iou": -0.9750577252495625,
+  "argmin_val_ce_epoch": 24,
+  "argmin_val_lovasz_epoch": 18,
+  "argmax_iou_epoch": 18,
+  "alignment_verdict": "Lovasz aligns with marking IoU better than CE",
+  "max_compose_train_residual": 6.840403243835169e-10,
+  "max_compose_val_residual": 8.705279275211808e-10,
+  "max_total_val_residual": 0.0
+}

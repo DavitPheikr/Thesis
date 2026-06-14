@@ -1,0 +1,2 @@
+best_epoch,best_val_lovasz_share,mean_val_lovasz_share,scale_verdict,val_lovasz_cv,val_ce_cv,stability_verdict,corr_ce_iou,corr_lovasz_iou,argmin_val_ce_epoch,argmin_val_lovasz_epoch,argmax_iou_epoch,alignment_verdict,max_compose_train_residual,max_compose_val_residual,max_total_val_residual
+18,0.4603446045486352,0.4476281222442065,dominant,0.10303044669376851,0.27148653119329236,stable,-0.9104367184738983,-0.9750577252495625,24,18,18,Lovasz aligns with marking IoU better than CE,6.840403243835169e-10,8.705279275211808e-10,0.0

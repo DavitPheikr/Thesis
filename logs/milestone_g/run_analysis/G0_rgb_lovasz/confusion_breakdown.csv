@@ -1,0 +1,10 @@
+true_class,pred_class,error_type,d0_count,e0_count,f0_count,g0_count,delta_g0_minus_d0,delta_g0_minus_f0
+road,road,road->road,9293429,9182801,9181540,9331842,38413,150302
+road,marking,road->marking,249846,363006,243315,168907,-80939,-74408
+road,other,road->other,89930,65832,62828,132456,42526,69628
+marking,road,marking->road,95638,51945,78971,92659,-2979,13688
+marking,marking,marking->marking,295065,341945,318219,296006,941,-22213
+marking,other,marking->other,1339,888,811,3377,2038,2566
+other,road,other->road,261710,236965,237218,117101,-144609,-120117
+other,marking,other->marking,28267,22130,17837,4976,-23291,-12861
+other,other,other->other,13221486,13267813,13391011,13389386,167900,-1625
