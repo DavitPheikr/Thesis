@@ -82,7 +82,7 @@ DEFAULT_RUN_DIR = PROJECT_ROOT / "logs/milestone_g/runs/G1_schedule_extend"
 FALLBACK_RUN_DIR = PROJECT_ROOT / "logs/milestone_g/runs/G0_rgb_lovasz"
 DEFAULT_SAVE_DIR = (
     PROJECT_ROOT
-    / "logs/milestone_g/run_analysis/front_camera_prediction_viewer/exports"
+    / "logs/milestone_g/run_analysis/front_camera_predictions"
 )
 
 CLASS_NAMES = ("road", "marking", "other")
@@ -861,7 +861,10 @@ def main() -> None:
 
         out_path = (
             args.save_dir
-            / f"{item['seq_id']}_lidar{item['frame_idx']:02d}_cam{item['cam_idx']:02d}_{mode}.png"
+            / run_dir.name
+            / item["seq_id"]
+            / mode
+            / f"{item['seq_id']}_lidar{item['frame_idx']:02d}_frontcam{item['cam_idx']:02d}_{mode}.png"
         )
         if args.save_only:
             save_frame(out_path, display)
