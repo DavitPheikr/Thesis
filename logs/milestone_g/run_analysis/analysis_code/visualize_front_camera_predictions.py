@@ -40,7 +40,7 @@ import numpy as np
 import pandas as pd
 import torch
 import yaml
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from sklearn.neighbors import KDTree
 from torch.utils.data import DataLoader
 
@@ -90,6 +90,10 @@ ACTIVE_CLASS_COLORS_BGR = {
     0: (255, 0, 0),    # road: blue
     1: (0, 0, 255),    # marking: red
     2: (0, 180, 0),    # other: green
+}
+ACTIVE_CLASS_COLORS_RGB = {
+    key: (value[2], value[1], value[0])
+    for key, value in ACTIVE_CLASS_COLORS_BGR.items()
 }
 GT_LABEL_TO_ACTIVE = {
     1: 0,  # road
@@ -498,32 +502,42 @@ def choose_camera_frame(dataset: ViewerDataset, seq_id: str, frame_idx: int) -> 
     return cam_idx, dt, meta
 
 
-def draw_points(image_rgb: np.ndarray, uv: np.ndarray, labels: np.ndarray, alpha: float, radius: int) -> np.ndarray:
-    import cv2
+def draw_filled_circle(draw: ImageDraw.ImageDraw, x: int, y: int, radius: int, color: tuple[int, int, int, int]) -> None:
+    draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=color)
 
-    base = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
-    overlay = base.copy()
-    for class_id in (2, 0, 1):
-        mask = labels == class_id
-        if not mask.any():
-            continue
-        color = ACTIVE_CLASS_COLORS_BGR[class_id]
-        coords = np.rint(uv[mask]).astype(np.int32)
-        for u, v in coords:
-            cv2.circle(overlay, (int(u), int(v)), radius, color, thickness=-1, lineType=cv2.LINE_AA)
-    return cv2.addWeighted(overlay, alpha, base, 1.0 - alpha, 0.0)
+
+def alpha_overlay(base_rgb: np.ndarray, draw_fn) -> np.ndarray:  # noqa: ANN001
+    base = Image.fromarray(base_rgb, mode="RGB").convert("RGBA")
+    overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    draw_fn(draw)
+    return np.asarray(Image.alpha_composite(base, overlay).convert("RGB"), dtype=np.uint8)
+
+
+def draw_points(image_rgb: np.ndarray, uv: np.ndarray, labels: np.ndarray, alpha: float, radius: int) -> np.ndarray:
+    alpha_byte = int(np.clip(alpha, 0.0, 1.0) * 255)
+
+    def draw_fn(draw: ImageDraw.ImageDraw) -> None:
+        for class_id in (2, 0, 1):
+            mask = labels == class_id
+            if not mask.any():
+                continue
+            color_rgb = ACTIVE_CLASS_COLORS_RGB[class_id]
+            color = (*color_rgb, alpha_byte)
+            coords = np.rint(uv[mask]).astype(np.int32)
+            for u, v in coords:
+                draw_filled_circle(draw, int(u), int(v), radius, color)
+
+    return alpha_overlay(image_rgb, draw_fn)
 
 
 def draw_error_points(image_rgb: np.ndarray, uv: np.ndarray, y_true: np.ndarray, y_pred: np.ndarray, alpha: float, radius: int) -> np.ndarray:
-    import cv2
-
-    base = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
-    overlay = base.copy()
-    colors = {
-        "marking_tp": (0, 0, 255),
-        "marking_missed": (0, 165, 255),
+    alpha_byte = int(np.clip(alpha, 0.0, 1.0) * 255)
+    colors_rgb = {
+        "marking_tp": (255, 0, 0),
+        "marking_missed": (255, 165, 0),
         "road_to_marking": (255, 0, 255),
-        "other_to_marking": (0, 255, 255),
+        "other_to_marking": (255, 255, 0),
         "correct_other": (180, 180, 180),
     }
     masks = {
@@ -533,26 +547,40 @@ def draw_error_points(image_rgb: np.ndarray, uv: np.ndarray, y_true: np.ndarray,
         "road_to_marking": (y_true == 0) & (y_pred == 1),
         "other_to_marking": (y_true == 2) & (y_pred == 1),
     }
-    for key in ("correct_other", "marking_tp", "marking_missed", "road_to_marking", "other_to_marking"):
-        mask = masks[key]
-        if not mask.any():
-            continue
-        coords = np.rint(uv[mask]).astype(np.int32)
-        draw_radius = max(radius, 3) if key != "correct_other" else max(1, radius - 1)
-        for u, v in coords:
-            cv2.circle(
-                overlay,
-                (int(u), int(v)),
-                draw_radius,
-                colors[key],
-                thickness=-1,
-                lineType=cv2.LINE_AA,
-            )
-    return cv2.addWeighted(overlay, alpha, base, 1.0 - alpha, 0.0)
+
+    def draw_fn(draw: ImageDraw.ImageDraw) -> None:
+        for key in (
+            "correct_other",
+            "marking_tp",
+            "marking_missed",
+            "road_to_marking",
+            "other_to_marking",
+        ):
+            mask = masks[key]
+            if not mask.any():
+                continue
+            draw_radius = max(radius, 3) if key != "correct_other" else max(1, radius - 1)
+            coords = np.rint(uv[mask]).astype(np.int32)
+            color = (*colors_rgb[key], alpha_byte)
+            for u, v in coords:
+                draw_filled_circle(draw, int(u), int(v), draw_radius, color)
+
+    return alpha_overlay(image_rgb, draw_fn)
+
+
+def draw_label_background(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, font: ImageFont.ImageFont) -> None:
+    x, y = xy
+    bbox = draw.textbbox((x, y), text, font=font)
+    pad = 5
+    draw.rectangle(
+        (bbox[0] - pad, bbox[1] - pad, bbox[2] + pad, bbox[3] + pad),
+        fill=(0, 0, 0, 210),
+    )
+    draw.text((x, y), text, fill=(255, 255, 255, 255), font=font)
 
 
 def add_hud(
-    image_bgr: np.ndarray,
+    image_rgb: np.ndarray,
     *,
     mode: str,
     seq_id: str,
@@ -567,44 +595,38 @@ def add_hud(
     coverage: float | None = None,
     passes_seen: int | None = None,
 ) -> np.ndarray:
-    import cv2
-
-    out = image_bgr.copy()
+    img = Image.fromarray(image_rgb, mode="RGB").convert("RGBA")
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.load_default()
     coverage_text = ""
     if coverage is not None and passes_seen is not None:
         coverage_text = f"  coverage={coverage:.3f} passes={passes_seen}"
     lines = [
         f"mode={mode}  seq={seq_id} lidar={lidar_frame:02d} cam={cam_frame:02d} dt={dt:+.4f}s",
         f"projected={n_projected}/{n_points}  rgb_valid_selected={rgb_valid_ratio:.3f}{coverage_text}  checkpoint_epoch={best_epoch if best_epoch is not None else 'manual'}",
-        f"ckpt={checkpoint.name}  keys: n/space next, p prev, p/g/e mode, s save, q quit",
+        f"ckpt={checkpoint.name}  keys: n/space next, b prev, p/g/e mode, s save, q quit",
     ]
-    x, y = 16, 28
+    x, y = 16, 16
     for line in lines:
-        (tw, th), _ = cv2.getTextSize(line, cv2.FONT_HERSHEY_SIMPLEX, 0.65, 2)
-        cv2.rectangle(out, (x - 6, y - th - 8), (x + tw + 6, y + 7), (0, 0, 0), -1)
-        cv2.putText(
-            out,
-            line,
-            (x, y),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.65,
-            (255, 255, 255),
-            2,
-            cv2.LINE_AA,
-        )
-        y += 28
+        draw_label_background(draw, (x, y), line, font)
+        y += 24
 
     legend = [
-        ("road", ACTIVE_CLASS_COLORS_BGR[0]),
-        ("marking", ACTIVE_CLASS_COLORS_BGR[1]),
-        ("other", ACTIVE_CLASS_COLORS_BGR[2]),
+        ("road", ACTIVE_CLASS_COLORS_RGB[0]),
+        ("marking", ACTIVE_CLASS_COLORS_RGB[1]),
+        ("other", ACTIVE_CLASS_COLORS_RGB[2]),
     ]
-    lx, ly = 16, out.shape[0] - 22 * len(legend) - 14
+    lx, ly = 16, img.height - 22 * len(legend) - 14
     for label, color in legend:
-        cv2.circle(out, (lx, ly), 6, color, -1, lineType=cv2.LINE_AA)
-        cv2.putText(out, label, (lx + 14, ly + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 2)
+        draw.ellipse((lx - 6, ly - 6, lx + 6, ly + 6), fill=(*color, 255))
+        draw_label_background(draw, (lx + 14, ly - 7), label, font)
         ly += 22
-    return out
+    return np.asarray(img.convert("RGB"), dtype=np.uint8)
+
+
+def save_frame(path: Path, image_rgb: np.ndarray) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(image_rgb, mode="RGB").save(path)
 
 
 def prepare_display_frame(
@@ -622,15 +644,6 @@ def prepare_display_frame(
     if mode == "gt":
         return draw_points(image_rgb, uv, y_true, alpha, radius)
     return draw_error_points(image_rgb, uv, y_true, y_pred, alpha, radius)
-
-
-def save_frame(path: Path, image_bgr: np.ndarray) -> None:
-    import cv2
-
-    path.parent.mkdir(parents=True, exist_ok=True)
-    ok = cv2.imwrite(str(path), image_bgr)
-    if not ok:
-        raise RuntimeError(f"cv2.imwrite failed for {path}")
 
 
 def main() -> None:
@@ -687,14 +700,6 @@ def main() -> None:
         pin_memory=False,
         collate_fn=batcher.collate_fn,
     )
-
-    try:
-        import cv2  # noqa: F401
-    except Exception as exc:  # noqa: BLE001
-        raise SystemExit(
-            "OpenCV/cv2 is required for this viewer. Install/use an environment "
-            f"with cv2 available. Import error: {exc}"
-        )
 
     mode = args.mode
     frames: list[dict[str, Any]] = []
@@ -872,7 +877,10 @@ def main() -> None:
 
         import cv2
 
-        cv2.imshow("Milestone G front-camera predictions", display)
+        cv2.imshow(
+            "Milestone G front-camera predictions",
+            cv2.cvtColor(display, cv2.COLOR_RGB2BGR),
+        )
         key = cv2.waitKey(0) & 0xFF
         if key in (ord("q"), 27):
             break
