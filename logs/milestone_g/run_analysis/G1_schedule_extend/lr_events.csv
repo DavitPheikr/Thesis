@@ -1,0 +1,2 @@
+run,epoch,lr_before,lr_after,factor
+G1,27,0.0014,0.0007,0.5

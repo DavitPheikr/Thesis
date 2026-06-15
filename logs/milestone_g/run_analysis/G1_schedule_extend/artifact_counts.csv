@@ -1,0 +1,5 @@
+run,eval_history_rows,eval_json_count,confusion_count,checkpoint_count,loss_components_rows
+D0,25,25,25,25,-1
+F0,25,25,25,25,-1
+G0,25,25,25,25,25
+G1,35,35,35,35,35
