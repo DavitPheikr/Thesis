@@ -101,6 +101,38 @@ python logs/milestone_g/run_analysis/analysis_code/g0_bias_sweep.py --device cud
 Outputs: `<G0 run_analysis>/scheduler_replay.{csv,md}` and
 `<G0 run_analysis>/bias_sweep/bias_sweep_{metrics.csv,summary.md}`.
 
+## G1 schedule-extension analysis
+
+G1 is the optional schedule-extension run: copy G0, resume from epoch 25, and
+continue to epoch 35 with the original G0 scheduler unchanged. The analysis is
+kept deliberately focused: exact requested CSVs, 11 core plots, sampled
+best-checkpoint CSVs, 2 sampled plots, and markdown reports.
+
+Run on the server after `logs/milestone_g/runs/G1_schedule_extend/` exists:
+
+```bash
+python logs/milestone_g/run_analysis/analysis_code/run_g1_full_analysis.py \
+  --device cuda \
+  --steps 2160 \
+  --seed 42
+```
+
+The orchestrator runs:
+
+1. `g1_analysis.py` - validates G1 artifacts/config/loss composition, discovers
+   the best epoch by max `lane_iou`, and writes the core CSVs plus `analysis.md`
+   and `visual_inspection_notes.md`.
+2. `g1_sampled_error_analysis.py` - fresh sampled validation inference using the
+   discovered best checkpoint, with RGB-valid/distance/sequence/raw-subtype CSVs.
+3. `plot_g1_schedule_extend_analysis.py` - writes exactly the requested 11 core
+   plots and 2 sampled plots, plus `plots/README.md` and `g1_conclusions.md`.
+
+All G1 outputs go under:
+
+```text
+logs/milestone_g/run_analysis/G1_schedule_extend/
+```
+
 ## Loss-comparison rule (important)
 
 For G0, `eval_history` `train_loss`/`val_loss` are the **TOTAL** loss
