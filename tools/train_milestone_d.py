@@ -53,6 +53,7 @@ from open3d._ml3d.torch.pipelines import SemanticSegmentation
 from open3d._ml3d.utils import get_runid
 
 from datasets.pandaset_ff_lane3 import PandaSetFFLane3Dataset
+from thesis_pipeline.augmentations import RGBJitterConfig, apply_rgb_jitter_to_features
 from thesis_pipeline.losses import build_loss
 from thesis_pipeline.eval.milestone_c_metrics import (
     EVAL_CSV_COLUMNS,
@@ -117,6 +118,11 @@ class MilestoneDPipeline(SemanticSegmentation):
         self.scheduler_watch_metric = "lane_iou"
         self.scheduler_smoothing_window = 1
         self.scheduler_metric_history: list[float] = []
+        self.rgb_jitter_cfg = RGBJitterConfig.from_mapping(
+            self.cfg.get("rgb_jitter", {})
+        )
+        if self.rgb_jitter_cfg.enabled and not self.rgb_jitter_cfg.train_only:
+            raise ValueError("rgb_jitter currently supports train_only=true only")
 
     def _current_lr(self) -> float:
         if not getattr(self, "optimizer", None):
@@ -146,6 +152,14 @@ class MilestoneDPipeline(SemanticSegmentation):
 
     def _scheduler_cfg(self) -> dict:
         return dict(self.cfg.get("scheduler", {}) or {})
+
+    def _apply_train_rgb_jitter(self, inputs) -> None:  # noqa: ANN001
+        if not self.rgb_jitter_cfg.enabled:
+            return
+        data = inputs["data"]
+        if "features" not in data:
+            raise RuntimeError("rgb_jitter enabled but batch data has no features")
+        apply_rgb_jitter_to_features(data["features"], self.rgb_jitter_cfg)
 
     def _build_optimizer_and_scheduler(self):
         opt_cfg = self._optimizer_cfg()
@@ -316,6 +330,17 @@ class MilestoneDPipeline(SemanticSegmentation):
         self.save_config(writer)
         print("run_train_save_config_done", flush=True)
         record_summary = cfg.get("summary").get("record_for", [])
+        if self.rgb_jitter_cfg.enabled:
+            print(
+                "rgb_jitter_enabled "
+                f"train_only={self.rgb_jitter_cfg.train_only} "
+                f"brightness=[{self.rgb_jitter_cfg.brightness_min},"
+                f"{self.rgb_jitter_cfg.brightness_max}] "
+                f"contrast=[{self.rgb_jitter_cfg.contrast_min},"
+                f"{self.rgb_jitter_cfg.contrast_max}] "
+                f"rgb_valid_threshold={self.rgb_jitter_cfg.rgb_valid_threshold}",
+                flush=True,
+            )
 
         if self.start_epoch > cfg.max_epoch:
             raise RuntimeError(
@@ -337,6 +362,7 @@ class MilestoneDPipeline(SemanticSegmentation):
             for step, inputs in enumerate(tqdm(train_loader, desc="training")):
                 if hasattr(inputs["data"], "to"):
                     inputs["data"].to(device)
+                self._apply_train_rgb_jitter(inputs)
                 self.optimizer.zero_grad()
                 results = model(inputs["data"])
                 loss, gt_labels, predict_scores = model.get_loss(
