@@ -1,0 +1,120 @@
+{
+  "class_order": {
+    "0": "road",
+    "1": "marking",
+    "2": "other"
+  },
+  "scales": [
+    "0.80",
+    "0.85",
+    "1.00",
+    "1.15",
+    "1.20"
+  ],
+  "confusions": {
+    "0.80": [
+      [
+        27628504,
+        435009,
+        282961
+      ],
+      [
+        286269,
+        859531,
+        5138
+      ],
+      [
+        500509,
+        12120,
+        40599564
+      ]
+    ],
+    "0.85": [
+      [
+        27606977,
+        454798,
+        284699
+      ],
+      [
+        274304,
+        871590,
+        5044
+      ],
+      [
+        495279,
+        13037,
+        40603877
+      ]
+    ],
+    "1.00": [
+      [
+        27543888,
+        507112,
+        295474
+      ],
+      [
+        251031,
+        895072,
+        4835
+      ],
+      [
+        500730,
+        15318,
+        40596145
+      ]
+    ],
+    "1.15": [
+      [
+        27468536,
+        556667,
+        321271
+      ],
+      [
+        239285,
+        906762,
+        4891
+      ],
+      [
+        522553,
+        16855,
+        40572785
+      ]
+    ],
+    "1.20": [
+      [
+        27437779,
+        574396,
+        334299
+      ],
+      [
+        237048,
+        908877,
+        5013
+      ],
+      [
+        531636,
+        17207,
+        40563350
+      ]
+    ]
+  },
+  "provenance": {
+    "generated_at": "2026-06-17T02:24:59",
+    "script": "logs/milestone_h/run_analysis/analysis_code/g1_rgb_brightness_sensitivity.py",
+    "config": "/home/coder/project/logs/milestone_g/configs/g1_schedule_extend.yml",
+    "checkpoint": "/home/coder/project/logs/milestone_g/runs/G1_schedule_extend/checkpoints/ckpt_epoch_00027.pth",
+    "split": "validation",
+    "steps": 2160,
+    "seed": 42,
+    "device": "cuda",
+    "rgb_valid_threshold": 0.5,
+    "feature_layout": "[x, y, z, intensity, r, g, b, rgb_valid]",
+    "rgb_columns": [
+      4,
+      5,
+      6
+    ],
+    "rgb_valid_column": 7,
+    "note": "Eval-only global RGB brightness scaling; no training/cache/config mutation."
+  }
+}
