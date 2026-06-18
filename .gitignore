@@ -44,3 +44,4 @@ logs/milestone_c/feature_cache/
 # Scratch worktrees and generated point-cloud exports
 /pandaset-devkit.worktrees/
 *.pcd
+logs/milestone_g/run_analysis/front_camera_predictions/
