@@ -1,0 +1,16 @@
+{
+  "config": "logs/milestone_f/configs/f0_rgb_soft_weights.yml",
+  "run_name": "F0_rgb_soft_weights",
+  "runs_dir": null,
+  "epochs": 25,
+  "seed": 42,
+  "steps_per_epoch_train": null,
+  "steps_per_epoch_valid": null,
+  "save_ckpt_freq": 1,
+  "device": "cuda",
+  "pin_memory": true,
+  "no_cache": false,
+  "force": true,
+  "resume_from": null,
+  "resume_latest": false
+}
