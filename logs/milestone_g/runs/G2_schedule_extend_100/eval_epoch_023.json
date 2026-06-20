@@ -1,0 +1,74 @@
+{
+  "epoch": 23,
+  "train_loss": 0.17833680506386185,
+  "val_loss": 0.2359176145763033,
+  "lr": 0.0014,
+  "peak_gpu_memory_bytes_val": 478459392,
+  "val_wall_clock_seconds": 64.45938191376626,
+  "metrics": {
+    "miou": 0.8061872392448884,
+    "per_class": {
+      "road": {
+        "iou": 0.9382234296517034,
+        "precision": 0.9696481367988463,
+        "recall": 0.9666110654956699,
+        "f1": 0.9681272192858602
+      },
+      "lane": {
+        "iou": 0.5040781037464076,
+        "precision": 0.6128998448832432,
+        "recall": 0.739518284987316,
+        "f1": 0.670281819130048
+      },
+      "other": {
+        "iou": 0.9762601843365545,
+        "precision": 0.9898713851526808,
+        "recall": 0.9861107817828207,
+        "f1": 0.9879875049593153
+      }
+    },
+    "confusion_matrix": [
+      [
+        9038898,
+        176590,
+        135634
+      ],
+      [
+        99473,
+        292390,
+        3516
+      ],
+      [
+        183462,
+        8080,
+        13599155
+      ]
+    ],
+    "lane_recall_by_distance": {
+      "0to10m": 0.7935961253867887,
+      "10to20m": 0.7365023264137437,
+      "20to30m": 0.7701127775292539,
+      "30plus": 0.6604285599421083
+    },
+    "support": {
+      "road": 9351122,
+      "lane": 395379,
+      "other": 13790697
+    },
+    "prediction_count": 23537198
+  },
+  "metric_aliases": {
+    "note": "For Milestone D label_mode=road_marking3, existing lane_* metric names mean marking_* because active class index 1 is the expanded road-marking class.",
+    "positive_class_name": "marking",
+    "marking_iou": "lane_iou",
+    "marking_precision": "lane_precision",
+    "marking_recall": "lane_recall",
+    "marking_f1": "lane_f1"
+  },
+  "class_indexing": {
+    "0": "road",
+    "1": "marking",
+    "2": "other",
+    "source": "Open3D filter_valid_label compresses raw labels 1/2/3 after ignoring raw label 0."
+  }
+}

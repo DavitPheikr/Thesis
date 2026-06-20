@@ -1,0 +1,106 @@
+dataset:
+  name: PandaSetFFLane3
+  label_mode: road_marking3
+  feature_mode: intensity_rgb_front
+  camera_name: front_camera
+  camera_lookup: nearest_timestamp
+  rgb_max_dt_s: 0.06
+  color_sampling: bilinear
+  rgb_normalization: divide_by_255
+  motion_compensation: none
+  dataset_path: null
+  cache_dir: logs/milestone_g/cache/G0_rgb_lovasz_v1
+  cache_grid_size: 0.04
+  use_cache: true
+  class_weights:
+  - 119562394.0
+  - 14344000.0
+  - 173473484.0
+  intensity_clip_low: 0.0
+  intensity_clip_high: 114.0
+  intensity_mean: 22.471752166748047
+  intensity_std: 14.902379989624023
+  ignored_label_inds:
+  - 0
+  test_result_folder: logs/milestone_g/test_results/G0_rgb_lovasz
+  sampler:
+    name: SemSegRandomSampler
+  split_dir: configs/splits
+  stats_file: logs/milestone_d/road_marking3_training_statistics.json
+  dataset_root_file: logs/dataset_root.txt
+  preflight_pattern_file: logs/milestone_b_preflight_sensor_pattern.txt
+  steps_per_epoch_train: 4640
+  steps_per_epoch_valid: 720
+model:
+  name: RandLANet
+  batcher: DefaultBatcher
+  ckpt_path: null
+  is_resume: false
+  num_neighbors: 24
+  num_layers: 3
+  num_points: 32768
+  num_classes: 3
+  ignored_label_inds:
+  - 0
+  sub_sampling_ratio:
+  - 4
+  - 4
+  - 4
+  in_channels: 8
+  dim_features: 16
+  dim_output:
+  - 16
+  - 64
+  - 128
+  grid_size: 0.04
+  augment:
+    recenter:
+      dim:
+      - 0
+      - 1
+    scale:
+      scale_anisotropic: false
+      min_s: 0.95
+      max_s: 1.05
+    noise:
+      noise_std: 0.01
+pipeline:
+  name: SemanticSegmentation
+  loss:
+    name: weighted_ce_lovasz
+    lovasz_lambda: 0.5
+    lovasz_classes: present
+  optimizer:
+    name: AdamW
+    lr: 0.0014
+    weight_decay: 0.0001
+  scheduler:
+    name: ReduceLROnPlateau
+    mode: max
+    factor: 0.5
+    patience: 6
+    threshold: 0.01
+    threshold_mode: abs
+    cooldown: 1
+    min_lr: 1.0e-06
+    watch_metric: marking_iou
+    smoothing_window: 3
+  batch_size: 2
+  num_workers: 0
+  pin_memory: true
+  val_batch_size: 2
+  test_batch_size: 1
+  max_epoch: 24
+  save_ckpt_freq: 1
+  main_log_dir: /home/coder/project/logs/milestone_g/runs/G0_rgb_lovasz/open3d_logs
+  train_sum_dir: /home/coder/project/logs/milestone_g/runs/G0_rgb_lovasz/tensorboard
+  ignored_label_inds:
+  - 0
+  device: cuda
+  split: train
+  summary:
+    record_for: []
+    max_pts: null
+    use_reference: false
+    max_outputs: 1
+  metric_alias_note: For label_mode=road_marking3, lane_* metrics mean marking_* metrics.
