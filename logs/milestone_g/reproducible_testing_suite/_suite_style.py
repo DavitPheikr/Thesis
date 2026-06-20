@@ -55,6 +55,29 @@ def run_colors(candidate: str, baselines) -> dict:
         m[b] = BASELINE_CYCLE[i % len(BASELINE_CYCLE)]
     return m
 
+
+# --------------------- thesis-facing run display names --------------------- #
+# Plots show these descriptive names instead of internal run codes (D0/F0/G2/H0),
+# because the thesis should not reference runs by alphabet codes. The names build
+# up incrementally so the reader sees what each run adds:
+#   LiDAR  ->  + RGB  ->  + Lovász loss  ->  + jitter augmentation.
+# Edit here only — every figure reads through display_name(). CSV/JSON/file names
+# keep the short codes for stability; only rendered figure text changes.
+DISPLAY_NAMES = {
+    "D0": "LiDAR",
+    "F0": "LiDAR + RGB",
+    "G0": "LiDAR + RGB + Lovász",
+    "G1": "LiDAR + RGB + Lovász",
+    "G2": "LiDAR + RGB + Lovász",
+    "H0": "LiDAR + RGB + Lovász + Jitter",
+}
+
+
+def display_name(label: str) -> str:
+    """Thesis-facing name for a run code (falls back to the code if unmapped)."""
+    return DISPLAY_NAMES.get(label, label)
+
+
 # Marking-metric family. IoU ties to the marking colour; the other three are
 # mutually distinct and do NOT reuse the candidate/baseline hues.
 METRIC = {
@@ -135,3 +158,30 @@ def headroom(ax, frac: float = 0.16, bottom: float | None = None) -> None:
     """Add vertical head-room so a 'best'/upper legend never sits on the data."""
     lo, hi = ax.get_ylim()
     ax.set_ylim(lo if bottom is None else bottom, hi + (hi - lo) * frac)
+
+
+def legend_clear(ax, loc: str = "upper left", frac: float = 0.18, ncol: int = 1,
+                 handles=None, labels=None, **kw):
+    """Draw a legend that does not sit on the data: first add top head-room,
+    then place the legend in an upper corner. Use this instead of bare
+    ax.legend() whenever lines/bars would otherwise cross the legend box."""
+    headroom(ax, frac=frac)
+    if handles is not None:
+        leg = ax.legend(handles, labels, loc=loc, ncol=ncol, **kw)
+    else:
+        leg = ax.legend(loc=loc, ncol=ncol, **kw)
+    if leg is not None:
+        leg.set_zorder(6)
+        leg.get_frame().set_linewidth(0.8)
+    return leg
+
+
+def legend_outside(ax, **kw):
+    """Place the legend just outside the axes (right side) so it can never
+    overlap the data. Use for dense bar/multi-series panels."""
+    leg = ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0),
+                    borderaxespad=0.0, **kw)
+    if leg is not None:
+        leg.set_zorder(6)
+        leg.get_frame().set_linewidth(0.8)
+    return leg

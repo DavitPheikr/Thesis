@@ -1,4 +1,4 @@
-# G2_schedule_extend_100 RGB Shortcut Fingerprint
+# LiDAR + RGB + Lovász RGB Shortcut Fingerprint
 
 **Framing.** These results are evidence that predictions are *associated*
 with a luminance-based RGB shortcut. They do not prove the model internally

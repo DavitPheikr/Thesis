@@ -23,10 +23,14 @@ from _suite_paths import (  # noqa: E402
     CANDIDATE_LABEL, BASELINE_LABEL, BASELINE_LABELS, BASELINE_DIR,
 )
 S.apply()
-CAND = CANDIDATE_LABEL    # current run's label in the CSVs/plots (e.g. "G2")
+CAND = CANDIDATE_LABEL    # current run's CODE in the CSVs (e.g. "G2"); data key only
 BASE = BASELINE_LABEL     # primary baseline (headline delta in conclusions)
 BASELINES = list(BASELINE_LABELS)         # all comparison baselines, in order
 RUN_COLORS = S.run_colors(CAND, BASELINES)  # stable colour per run label
+# Thesis-facing names for figure text (titles/legends). CAND/BASE stay as codes
+# for filtering the CSVs; DISP / RUN_DISP are what the reader sees on the plots.
+DISP = S.display_name(CAND)
+RUN_DISP = {r: S.display_name(r) for r in [CAND, *BASELINES]}
 G0_RUN_DIR = BASELINE_DIR  # primary baseline run dir
 PLOTS_DIR = OUT_DIR / "plots"
 
@@ -118,7 +122,7 @@ def plot_loss_curves(data: dict[str, pd.DataFrame]) -> None:
     ax.axvline(best, color="black", linestyle="--", linewidth=1.2, label=f"best epoch {best}")
     ax.set_xlabel("epoch")
     ax.set_ylabel("total loss")
-    ax.set_title(f"{CAND} train and validation total loss")
+    ax.set_title(f"{DISP} train and validation total loss")
     style(ax)
     ax.legend()
     savefig(fig, PLOTS_DIR / "loss_curves.png")
@@ -135,7 +139,7 @@ def plot_loss_components(data: dict[str, pd.DataFrame], split: str, out_name: st
     ax.axvline(best, color="black", linestyle="--", linewidth=1.2, label=f"best epoch {best}")
     ax.set_xlabel("epoch")
     ax.set_ylabel("loss")
-    ax.set_title(f"{CAND} {split} loss components")
+    ax.set_title(f"{DISP} {split} loss components")
     style(ax)
     ax.legend()
     savefig(fig, PLOTS_DIR / out_name)
@@ -145,25 +149,27 @@ def plot_lr_schedule(data: dict[str, pd.DataFrame]) -> None:
     g1 = data["epoch"][data["epoch"]["run"] == CAND]
     events = data["events"][data["events"]["run"] == CAND]
     best = g1_best_epoch(data["summary"])
-    fig, ax = plt.subplots(figsize=(10.8, 5.8))
-    ax.step(g1["epoch"], g1["lr"], where="post", linewidth=2.4, color=G1_COLOR)
-    ax.scatter(g1["epoch"], g1["lr"], color=G1_COLOR, s=28)
+    fig, ax = plt.subplots(figsize=(11.0, 5.8))
+    # Log y-scale: the LR anneals across several orders of magnitude (e.g.
+    # 1.4e-3 -> ~2.7e-6), so a linear axis crushes the later drops onto one line.
+    # Log scale spreads every drop out evenly and the y-axis ticks carry the
+    # values, so per-drop value labels (which used to overlap) are not needed.
+    ax.set_yscale("log")
+    ax.step(g1["epoch"], g1["lr"], where="post", linewidth=2.2, color=G1_COLOR)
+    ax.scatter(events["epoch"], events["lr_after"], color=G1_COLOR, s=34, zorder=5)
     ax.axvline(best, color="black", linestyle="--", linewidth=1.2, label=f"best epoch {best}")
+    # Label each drop with just its epoch (short, no overlap); the value is read
+    # off the log y-axis.
     for _, row in events.iterrows():
-        ax.annotate(
-            f"{row['lr_before']:.4g}->{row['lr_after']:.4g}",
-            (row["epoch"], row["lr_after"]),
-            xytext=(8, 14),
-            textcoords="offset points",
-            fontsize=9,
-            arrowprops={"arrowstyle": "->", "linewidth": 0.8},
-        )
+        ax.annotate(f"e{int(row['epoch'])}", (row["epoch"], row["lr_after"]),
+                    xytext=(0, -14), textcoords="offset points",
+                    fontsize=8.5, ha="center", va="top", color="#444444")
     ax.set_xlabel("epoch")
-    ax.set_ylabel("learning rate")
-    ax.set_title(f"{CAND} ReduceLROnPlateau schedule")
-    ax.set_ylim(0, max(g1["lr"]) * 1.18)
+    ax.set_ylabel("learning rate (log scale)")
+    ax.set_title(f"{DISP} — ReduceLROnPlateau schedule")
     style(ax)
-    ax.legend()
+    ax.grid(True, which="both", axis="y", color=S.GRID, alpha=0.4, linewidth=0.7)
+    S.legend(ax, loc="upper right")
     savefig(fig, PLOTS_DIR / "lr_schedule.png")
 
 
@@ -182,7 +188,7 @@ def plot_marking_metrics(data: dict[str, pd.DataFrame]) -> None:
     ax.set_xlabel("epoch")
     ax.set_ylabel("score (0–1)")
     ax.set_ylim(0, 1.0)
-    ax.set_title(f"{CAND} marking metrics over epochs")
+    ax.set_title(f"{DISP} marking metrics over epochs")
     style(ax)
     ax.legend(ncol=2)
     savefig(fig, PLOTS_DIR / "marking_metrics_over_epochs.png")
@@ -203,7 +209,7 @@ def plot_iou_per_class(data: dict[str, pd.DataFrame]) -> None:
     ax.set_xlabel("epoch")
     ax.set_ylabel("IoU")
     ax.set_ylim(0, 1.0)
-    ax.set_title(f"{CAND} per-class IoU and mIoU over epochs")
+    ax.set_title(f"{DISP} per-class IoU and mIoU over epochs")
     style(ax)
     ax.legend(ncol=2)
     savefig(fig, PLOTS_DIR / "iou_per_class_and_miou_over_epochs.png")
@@ -222,24 +228,29 @@ def plot_comparison(data: dict[str, pd.DataFrame]) -> None:
         ("lane_precision", "marking precision"),
         ("lane_recall", "marking recall"),
     ]
-    fig, axes = plt.subplots(2, 2, figsize=(13.8, 8.8))
+    fig, axes = plt.subplots(2, 2, figsize=(15.0, 9.6))
     for ax, (col, label) in zip(axes.ravel(), panels):
         for run in _runs_in_order():
             sub = epoch[epoch["run"] == run]
             if sub.empty:
                 continue
             is_cand = run == CAND
-            ax.plot(sub["epoch"], sub[col], marker="o",
-                    linewidth=2.4 if is_cand else 1.8,
+            # Lines only (no per-epoch markers): with up to 100 epochs the markers
+            # were large and overlapping and hid the line. Candidate is drawn
+            # thicker and on top so it still stands out.
+            ax.plot(sub["epoch"], sub[col],
+                    linewidth=2.6 if is_cand else 1.9,
                     zorder=4 if is_cand else 3,
-                    label=run, color=RUN_COLORS[run])
+                    label=RUN_DISP[run], color=RUN_COLORS[run])
         ax.set_xlabel("epoch")
         ax.set_ylabel(label)
         ax.set_title(label)
+        ax.set_xlim(left=1)
         style(ax)
-        ax.legend()
-    others = " vs ".join(BASELINES)
-    fig.suptitle(f"{CAND} vs {others} — marking curves", y=0.995, fontsize=15, fontweight="bold")
+        S.legend(ax, loc="lower right")
+    fig.suptitle("Marking metrics over training — "
+                 + " vs ".join(RUN_DISP[r] for r in _runs_in_order()),
+                 y=0.998, fontsize=14, fontweight="bold")
     savefig(fig, PLOTS_DIR / "comparison_marking_curves.png")
 
 
@@ -258,7 +269,7 @@ def plot_pred_true(data: dict[str, pd.DataFrame]) -> None:
                 label=run, color=RUN_COLORS[run])
     ax.axhline(1.0, color=S.CALIBRATED, linestyle=":", linewidth=1.3, label="calibrated (1.0)")
     ax.axvline(best, color=S.REFERENCE, linestyle="--", linewidth=1.0, alpha=0.6,
-               label=f"{CAND} best epoch {best}")
+               label=f"{DISP} best epoch {best}")
     ax.set_xlabel("epoch")
     ax.set_ylabel("predicted marking / true marking")
     ax.set_title("Predicted / true marking ratio over epochs")
@@ -270,7 +281,7 @@ def plot_pred_true(data: dict[str, pd.DataFrame]) -> None:
 def confusion_matrix(epoch: int) -> np.ndarray:
     cm = np.load(require_file(G1_RUN_DIR / f"confusion_epoch_{epoch:03d}.npy"))
     if cm.shape != (3, 3):
-        raise RuntimeError(f"{CAND} confusion epoch {epoch} shape {cm.shape}; expected (3, 3)")
+        raise RuntimeError(f"{DISP} confusion epoch {epoch} shape {cm.shape}; expected (3, 3)")
     return cm.astype(np.int64, copy=False)
 
 
@@ -321,21 +332,25 @@ def plot_runtime(data: dict[str, pd.DataFrame]) -> None:
     g1 = data["epoch"][data["epoch"]["run"] == CAND]
     log = load_training_log()
     fig, axes = plt.subplots(2, 1, figsize=(11.0, 8.2), sharex=True)
-    axes[0].plot(log["epoch"], log["wall_clock_seconds"] / 60.0, marker="o", color=G1_COLOR, linewidth=2.1)
+    axes[0].plot(log["epoch"], log["wall_clock_seconds"] / 60.0, color=G1_COLOR, linewidth=2.1)
     axes[0].set_ylabel("train+val minutes")
-    axes[0].set_title(f"{CAND} runtime per epoch")
+    axes[0].set_title(f"{DISP} — runtime per epoch")
     style(axes[0])
-    axes[1].plot(g1["epoch"], g1["val_wall_clock_seconds"], marker="o", color=ROAD_COLOR, linewidth=2.1, label="validation seconds")
+    axes[1].plot(g1["epoch"], g1["val_wall_clock_seconds"], color=ROAD_COLOR, linewidth=2.1, label="validation seconds")
     ax2 = axes[1].twinx()
-    ax2.plot(g1["epoch"], g1["peak_gpu_memory_bytes_val"] / (1024.0 * 1024.0), marker="s", color=MARKING_COLOR, linewidth=2.0, label="peak GPU MiB")
+    ax2.plot(g1["epoch"], g1["peak_gpu_memory_bytes_val"] / (1024.0 * 1024.0), color=MARKING_COLOR, linewidth=2.0, label="peak GPU MiB")
     axes[1].set_xlabel("epoch")
     axes[1].set_ylabel("validation seconds")
     ax2.set_ylabel("peak GPU memory (MiB)")
-    axes[1].set_title(f"{CAND} validation time and memory")
+    axes[1].set_title(f"{DISP} — validation time and memory")
     style(axes[1])
+    # Add head-room on both y-axes so the combined legend never sits on a line.
+    S.headroom(axes[1], frac=0.22)
+    S.headroom(ax2, frac=0.22)
     h1, l1 = axes[1].get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
-    axes[1].legend(h1 + h2, l1 + l2, loc="upper right")
+    leg = axes[1].legend(h1 + h2, l1 + l2, loc="upper right")
+    leg.set_zorder(6)
     savefig(fig, PLOTS_DIR / "runtime_and_memory.png")
 
 
@@ -354,7 +369,7 @@ def plot_sampled_distance(data: dict[str, pd.DataFrame]) -> None:
         axes[0].plot(x, df[col], marker="o", linewidth=2.0, label=label, color=color)
     axes[0].set_ylabel("score (0–1)")
     axes[0].set_ylim(0, 1)
-    axes[0].set_title(f"{CAND} best-checkpoint marking metrics by distance")
+    axes[0].set_title(f"{DISP} best-checkpoint marking metrics by distance")
     axes[0].legend(ncol=2)
     style(axes[0])
     axes[1].bar(x, df["predicted_true_marking_ratio"], color=S.PRED_TRUE, alpha=0.85)
@@ -362,7 +377,7 @@ def plot_sampled_distance(data: dict[str, pd.DataFrame]) -> None:
     axes[1].set_ylabel("predicted / true marking")
     axes[1].set_xlabel("distance bucket")
     axes[1].set_xticks(x, labels)
-    axes[1].set_title(f"{CAND} best-checkpoint marking calibration by distance")
+    axes[1].set_title(f"{DISP} best-checkpoint marking calibration by distance")
     style(axes[1])
     savefig(fig, sdir / "plots/distance_metrics_best_checkpoint.png")
 
@@ -383,7 +398,7 @@ def plot_sampled_rgb_valid(data: dict[str, pd.DataFrame]) -> None:
     axes[0].bar(x, sub["true_marking_share"], width, label="true marking share", color=S.MARKING, alpha=0.85)
     axes[0].bar(x + width, sub["predicted_marking_share"], width, label="predicted marking share", color=S.PRED_TRUE, alpha=0.85)
     axes[0].set_ylabel("share")
-    axes[0].set_title(f"{CAND} sampled point contribution by RGB validity")
+    axes[0].set_title(f"{DISP} sampled point contribution by RGB validity")
     axes[0].legend()
     style(axes[0])
     for col, label, color in [
@@ -396,7 +411,7 @@ def plot_sampled_rgb_valid(data: dict[str, pd.DataFrame]) -> None:
     axes[1].axhline(1.0, color=S.CALIBRATED, linestyle=":", linewidth=1.0, alpha=0.6)
     axes[1].set_xticks(x, order)
     axes[1].set_ylabel("score / ratio")
-    axes[1].set_title(f"{CAND} best-checkpoint metrics by RGB validity")
+    axes[1].set_title(f"{DISP} best-checkpoint metrics by RGB validity")
     axes[1].legend(ncol=2)
     style(axes[1])
     savefig(fig, sdir / "plots/rgb_valid_vs_invalid_best_checkpoint.png")
@@ -475,8 +490,8 @@ def write_conclusions(data: dict[str, pd.DataFrame]) -> None:
         "| run | epoch | marking IoU | F1 | precision | recall | mIoU | pred/true |",
         "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         *base_table,
-        row_md(f"{CAND} best", g1, g1_pt),
-        row_md(f"{CAND} final", g1_final, float("nan")),
+        row_md(f"{DISP} best", g1, g1_pt),
+        row_md(f"{DISP} final", g1_final, float("nan")),
         "",
         "## Interpretation",
         "",
@@ -524,8 +539,8 @@ def main() -> None:
     plot_iou_per_class(data)
     plot_comparison(data)
     plot_pred_true(data)
-    plot_confusion(best, "confusion_best_checkpoint.png", f"{CAND} epoch {best} confusion matrix")
-    plot_confusion(final, "confusion_final_epoch.png", f"{CAND} epoch {final} confusion matrix")
+    plot_confusion(best, "confusion_best_checkpoint.png", f"{DISP} epoch {best} confusion matrix")
+    plot_confusion(final, "confusion_final_epoch.png", f"{DISP} epoch {final} confusion matrix")
     plot_runtime(data)
     plot_sampled_distance(data)
     plot_sampled_rgb_valid(data)

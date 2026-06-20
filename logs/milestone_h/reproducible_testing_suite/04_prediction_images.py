@@ -149,7 +149,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", choices=("auto", "cuda", "cpu"), default="auto")
-    parser.add_argument("--alpha", type=float, default=0.70)
+    parser.add_argument("--alpha", type=float, default=1.0,
+                        help="Point opacity 0-1. Default 1.0 = fully opaque (no transparency).")
     parser.add_argument("--point-radius", type=int, default=2)
     parser.add_argument(
         "--mode",

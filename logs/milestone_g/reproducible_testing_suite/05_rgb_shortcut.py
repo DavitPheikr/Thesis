@@ -283,7 +283,8 @@ def plot_brightness_luminance(fp: pd.DataFrame, label: str, out_path: Path) -> N
     ax.grid(True, axis="y", alpha=0.25)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.legend()
+    S.headroom(ax, frac=0.18)
+    S.legend(ax, loc="upper right")
     for i, g in enumerate(groups):
         ax.text(i + offsets[0], float(fp.loc[g, "brightness_mean"]) + 0.008, f"{float(fp.loc[g, 'brightness_mean']):.3f}", ha="center", fontsize=8)
     fig.tight_layout(pad=1.4)
@@ -304,7 +305,8 @@ def plot_warmth_saturation(fp: pd.DataFrame, label: str, out_path: Path) -> None
     ax.grid(True, axis="y", alpha=0.25)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.legend()
+    S.headroom(ax, frac=0.18)
+    S.legend(ax, loc="upper right")
     fig.tight_layout(pad=1.4)
     fig.savefig(out_path, dpi=240, bbox_inches="tight", pad_inches=0.16)
     plt.close(fig)
@@ -341,7 +343,9 @@ def plot_brightness_vs_intensity(fp: pd.DataFrame, label: str, out_path: Path) -
     ax.grid(True, alpha=0.25)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.legend(loc="best", fontsize=8)
+    # Bubbles fill the panel and each is already annotated on the plot; put the
+    # legend outside (right) so it never sits on a bubble.
+    S.legend_outside(ax, fontsize=9)
     fig.tight_layout(pad=1.4)
     fig.savefig(out_path, dpi=240, bbox_inches="tight", pad_inches=0.16)
     plt.close(fig)

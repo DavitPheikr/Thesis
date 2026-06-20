@@ -65,10 +65,15 @@ def plot_per_sequence(sampled: Path) -> None:
     ax2.tick_params(axis="y", labelcolor=S.PRED_TRUE)
     ax2.spines["top"].set_visible(False)
 
+    # Head-room on both axes so the combined legend sits above the data (the
+    # short bars + pred/true line previously crossed the legend box).
+    S.headroom(ax, frac=0.24)
+    S.headroom(ax2, frac=0.34)
     h1, l1 = ax.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
-    ax.legend(h1 + h2, l1 + l2, loc="upper left")
-    ax.set_title(f"{CANDIDATE_LABEL}: per-sequence marking IoU and calibration (best checkpoint)")
+    leg = ax.legend(h1 + h2, l1 + l2, loc="upper left", framealpha=0.95)
+    leg.set_zorder(7)
+    ax.set_title(f"{S.display_name(CANDIDATE_LABEL)}: per-sequence marking IoU and calibration (best checkpoint)")
     fig.tight_layout()
     fig.savefig(PLOTS_DIR / "per_sequence_marking_performance.png")
     plt.close(fig)
@@ -92,11 +97,12 @@ def plot_per_subtype(sampled: Path) -> None:
     ax.set_xticklabels(names, fontsize=10)
     ax.set_ylabel("marking recall")
     ax.set_ylim(0, 1.05)
-    ax.set_title(f"{CANDIDATE_LABEL}: marking recall by raw subtype and RGB validity (best checkpoint)")
-    ax.legend(title="stratum")
+    ax.set_title(f"{S.display_name(CANDIDATE_LABEL)}: marking recall by raw subtype and RGB validity (best checkpoint)")
+    # Legend outside (right) so it never sits on top of a bar.
+    S.legend_outside(ax, title="stratum")
     S.style_axes(ax)
     fig.tight_layout()
-    fig.savefig(PLOTS_DIR / "raw_subtype_marking_recall.png")
+    fig.savefig(PLOTS_DIR / "raw_subtype_marking_recall.png", bbox_inches="tight")
     plt.close(fig)
 
 

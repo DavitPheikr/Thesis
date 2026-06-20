@@ -58,8 +58,10 @@ def main() -> None:
 
     sys.path.insert(0, str(SUITE))
     import _suite_paths as cfg
+    import _suite_style as S
 
-    print(f"[suite] run={cfg.RUN_NAME}  analysis_out={cfg.ANALYSIS_OUT}", flush=True)
+    disp = S.display_name(cfg.CANDIDATE_LABEL)  # thesis-facing run name
+    print(f"[suite] run={cfg.RUN_NAME} ({disp})  analysis_out={cfg.ANALYSIS_OUT}", flush=True)
 
     if not args.skip_core:
         run([PY, SUITE / "01_run_analysis.py"])
@@ -70,14 +72,19 @@ def main() -> None:
 
     if args.images:
         fc_root = cfg.ANALYSIS_OUT.parent / "front_camera_predictions" / cfg.RUN_NAME
+        # Render all three overlays per sequence — ground truth, prediction, and
+        # error map — each fully opaque (--alpha 1.0, no transparency), into a
+        # per-mode subfolder so they don't overwrite each other.
         for seq in IMAGE_SEQUENCES:
-            run([PY, SUITE / "04_prediction_images.py",
-                 "--run-dir", cfg.RUN_DIR, "--split", "validation", "--sequence", seq,
-                 "--save-only", "--save-dir", fc_root / seq, "--device", args.device])
+            for mode in ("gt", "pred", "error"):
+                run([PY, SUITE / "04_prediction_images.py",
+                     "--run-dir", cfg.RUN_DIR, "--split", "validation", "--sequence", seq,
+                     "--mode", mode, "--alpha", "1.0",
+                     "--save-only", "--save-dir", fc_root / seq / mode, "--device", args.device])
 
     if args.rgb_shortcut:
         run([PY, SUITE / "05_rgb_shortcut.py",
-             "--run-dir", cfg.ANALYSIS_OUT, "--label", cfg.RUN_NAME])
+             "--run-dir", cfg.ANALYSIS_OUT, "--label", disp])
 
     if args.bias_sweep:
         run([PY, SUITE / "06_bias_sweep.py",
