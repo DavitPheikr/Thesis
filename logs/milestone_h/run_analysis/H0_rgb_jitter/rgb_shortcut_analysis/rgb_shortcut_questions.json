@@ -1,0 +1,48 @@
+{
+  "q1_fp_brighter_than_road_tp": {
+    "value": true,
+    "fp_brightness_mean": 0.40921993624340686,
+    "road_tp_brightness_mean": 0.39330082156972845,
+    "delta_mean": 0.015919114673678403,
+    "fp_brightness_median": 0.4840608338514964,
+    "road_tp_brightness_median": 0.39192865292231244,
+    "delta_median": 0.09213218092918396
+  },
+  "q2_fp_brightness_vs_true_marking": {
+    "fp_brightness_mean": 0.40921993624340686,
+    "marking_tp_brightness_mean": 0.3808370244704787,
+    "delta_fp_minus_marking_mean": 0.028382911772928177,
+    "fp_brightness_median": 0.4840608338514964,
+    "marking_tp_brightness_median": 0.3926018426815669,
+    "delta_fp_minus_marking_median": 0.0914589911699295,
+    "fp_at_least_as_bright_as_marking": true
+  },
+  "q3_marking_colored_or_bright_gray": {
+    "fp_saturation_proxy_approx": 0.046457380056381226,
+    "marking_saturation_proxy_approx": 0.0649762898683548,
+    "fp_warmth": 0.039592980004969025,
+    "marking_warmth": 0.024839623379058706,
+    "fp_less_saturated_than_marking": true
+  },
+  "q4_missed_markings_darker_than_detected": {
+    "value": true,
+    "missed_brightness_mean": 0.32838430210772085,
+    "detected_brightness_mean": 0.3808370244704787,
+    "delta_mean": -0.05245272236275783
+  },
+  "q5_brightness_intensity_disagreement_in_fp": {
+    "fp_brighter_than_road": true,
+    "fp_intensity_position_road0_marking1": 0.3857253468538349,
+    "fp_intensity_mean": 32.269823064666646,
+    "road_tp_intensity_mean": 27.91890446218275,
+    "marking_tp_intensity_mean": 39.19874032978161,
+    "disagreement": true
+  },
+  "q6_concentrated_in_rgb_valid": {
+    "road_to_marking_rgb_valid": 363876,
+    "road_to_marking_rgb_invalid": 95504,
+    "rgb_valid_share_of_fp": 0.7921023988854543,
+    "pred_true_rgb_valid": 1.1826733853309164,
+    "pred_true_rgb_invalid": 1.1449434276005832
+  }
+}

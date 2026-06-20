@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-19T02:15:47",
+  "generated_at": "2026-06-20T22:34:09",
   "script": "logs/milestone_g/reproducible_testing_suite/02_sampled_error_analysis.py",
   "config": "/home/coder/project/logs/milestone_g/configs/g1_schedule_extend.yml",
   "checkpoint": "/home/coder/project/logs/milestone_g/runs/G2_schedule_extend_100/checkpoints/ckpt_epoch_00068.pth",

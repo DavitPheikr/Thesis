@@ -1,0 +1,16 @@
+{
+  "config": "logs/milestone_h/configs/h0_rgb_jitter.yml",
+  "run_name": "H0_rgb_jitter",
+  "runs_dir": null,
+  "epochs": 100,
+  "seed": 42,
+  "steps_per_epoch_train": null,
+  "steps_per_epoch_valid": null,
+  "save_ckpt_freq": 1,
+  "device": "cuda",
+  "pin_memory": true,
+  "no_cache": false,
+  "force": true,
+  "resume_from": null,
+  "resume_latest": false
+}
