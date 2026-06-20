@@ -1,0 +1,6 @@
+signal,column,pearson_corr_with_marking_iou,argmin_epoch,argmax_marking_iou_epoch
+validation CE,val_ce_loss,-0.8330509253934851,31,68
+validation Lovasz raw,val_lovasz_loss,-0.9844539761217095,80,68
+validation Lovasz scaled,val_lovasz_scaled,-0.9844539761217095,80,68
+validation total,val_total_loss,-0.9144268851085492,80,68
+training total,train_total_loss,-0.9401534211258338,100,68

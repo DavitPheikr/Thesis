@@ -1,0 +1,90 @@
+{
+  "generated_at": "2026-06-19T02:15:47",
+  "script": "logs/milestone_g/reproducible_testing_suite/02_sampled_error_analysis.py",
+  "config": "/home/coder/project/logs/milestone_g/configs/g1_schedule_extend.yml",
+  "checkpoint": "/home/coder/project/logs/milestone_g/runs/G2_schedule_extend_100/checkpoints/ckpt_epoch_00068.pth",
+  "checkpoint_epoch": 68,
+  "split": "validation",
+  "steps": 2160,
+  "seed": 42,
+  "device": "cuda",
+  "rgb_valid_threshold": 0.5,
+  "note": "Fresh sampled inference pass; not the exact original best-epoch validation sample.",
+  "class_order": {
+    "0": "road",
+    "1": "marking",
+    "2": "other"
+  },
+  "raw_remap_alignment": {
+    "checked_points": 70609605,
+    "mismatched_points": 0,
+    "mismatch_rate": 0.0,
+    "threshold": 0.001
+  },
+  "sampled_metrics": {
+    "active_points": 70609605,
+    "true_marking": 1150938,
+    "predicted_marking": 1462267,
+    "marking_tp": 916369,
+    "marking_fp": 545898,
+    "marking_fn": 234569,
+    "marking_iou": 0.5400457086011848,
+    "marking_precision": 0.626676933829458,
+    "marking_recall": 0.7961931919877526,
+    "marking_f1": 0.7013372467908182,
+    "predicted_true_marking_ratio": 1.2705002354601203,
+    "road_to_marking": 532367,
+    "marking_to_road": 229626,
+    "other_to_marking": 13531
+  },
+  "rgb_valid_metrics": {
+    "active_points": 57677257,
+    "true_marking": 901965,
+    "predicted_marking": 1162269,
+    "marking_tp": 723985,
+    "marking_fp": 438284,
+    "marking_fn": 177980,
+    "marking_iou": 0.540186935412748,
+    "marking_precision": 0.6229065732631602,
+    "marking_recall": 0.8026752701047158,
+    "marking_f1": 0.7014563271412059,
+    "predicted_true_marking_ratio": 1.2885965641682326,
+    "road_to_marking": 427293,
+    "marking_to_road": 174771,
+    "other_to_marking": 10991
+  },
+  "rgb_invalid_metrics": {
+    "active_points": 12932348,
+    "true_marking": 248973,
+    "predicted_marking": 299998,
+    "marking_tp": 192384,
+    "marking_fp": 107614,
+    "marking_fn": 56589,
+    "marking_iou": 0.5395149009919038,
+    "marking_precision": 0.6412842752285015,
+    "marking_recall": 0.772710293887289,
+    "marking_f1": 0.7008894823223814,
+    "predicted_true_marking_ratio": 1.2049419013306664,
+    "road_to_marking": 105074,
+    "marking_to_road": 54855,
+    "other_to_marking": 2540
+  },
+  "confusion_matrix": [
+    [
+      27521255,
+      532367,
+      292852
+    ],
+    [
+      229626,
+      916369,
+      4943
+    ],
+    [
+      383042,
+      13531,
+      40715620
+    ]
+  ],
+  "run_name": "G2_schedule_extend_100"
+}
