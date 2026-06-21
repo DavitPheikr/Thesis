@@ -528,6 +528,14 @@ def main() -> None:
 
     split = dataset.get_split(args.split)
     sampler = split.sampler
+    # Force the number of sampled patches to exactly --steps for ANY split. The
+    # dataset only honours steps_per_epoch_train/valid, so the TEST split would
+    # otherwise fall back to len(split) (one patch per frame) and be sampled far
+    # more sparsely than the 2160-patch validation diagnostics — making val and
+    # test not comparable. Setting sampler.length here makes the random sampler
+    # draw exactly --steps patches (frames are revisited via the dataloader's
+    # index wraparound), so validation and test use an identical protocol.
+    sampler.length = int(args.steps)
     model.trans_point_sampler = sampler.get_point_sampler()
     torch_split = TorchDataloader(
         dataset=split,
