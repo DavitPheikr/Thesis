@@ -32,7 +32,7 @@ import math
 import os
 import random
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -66,6 +66,9 @@ import open3d.ml.torch as ml3d  # noqa: E402
 from pandaset import geometry as pds_geometry  # noqa: E402
 from open3d._ml3d.datasets.utils import DataProcessing  # noqa: E402
 from open3d._ml3d.datasets.samplers.semseg_random import SemSegRandomSampler  # noqa: E402
+from open3d._ml3d.datasets.samplers.semseg_spatially_regular import (  # noqa: E402
+    SemSegSpatiallyRegularSampler,
+)
 from open3d._ml3d.torch.dataloaders import TorchDataloader, get_sampler  # noqa: E402
 from open3d._ml3d.torch.modules.losses.semseg_loss import filter_valid_label  # noqa: E402
 from open3d._ml3d.torch.pipelines import SemanticSegmentation  # noqa: E402
@@ -143,6 +146,17 @@ def parse_args() -> argparse.Namespace:
         help="Output dir. Default: sampled_error_analysis_epoch{best}.",
     )
     parser.add_argument("--split", choices=("validation", "test"), default="validation")
+    parser.add_argument(
+        "--coverage",
+        choices=("sampled", "full"),
+        default="sampled",
+        help=(
+            "sampled = --steps random patches across all frames (matches the "
+            "validation diagnostics); full = spatially-regular FULL coverage of "
+            "every frame (headline final-evaluation protocol, ~8 patches/frame). "
+            "full also emits coverage-count, agreement-rate and voted-CM diagnostics."
+        ),
+    )
     parser.add_argument("--steps", type=int, default=2160)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", choices=("auto", "cuda", "cpu"), default="auto")
@@ -493,6 +507,22 @@ def summarize(values: np.ndarray) -> dict[str, float | int | None]:
     }
 
 
+def hist_percentiles(counter: Counter) -> dict[str, int | None]:
+    """median / p10 / p90 / max of a value->frequency histogram (coverage counts)."""
+    if not counter:
+        return {"count": 0, "median": None, "p10": None, "p90": None, "max": None}
+    vals = np.array(sorted(counter), dtype=np.int64)
+    freqs = np.array([counter[int(v)] for v in vals], dtype=np.int64)
+    cum = np.cumsum(freqs)
+    total = int(cum[-1])
+
+    def q(p: float) -> int:
+        i = int(np.searchsorted(cum, p * total, side="left"))
+        return int(vals[min(i, len(vals) - 1)])
+
+    return {"count": total, "median": q(0.5), "p10": q(0.1), "p90": q(0.9), "max": int(vals[-1])}
+
+
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     keys = list(rows[0]) if rows else []
@@ -528,21 +558,26 @@ def main() -> None:
     model, checkpoint_data = load_model(cfg, checkpoint, device)
 
     split = dataset.get_split(args.split)
-    # Open3D's BaseDatasetSplit HARD-CODES SemSegSpatiallyRegularSampler for the
-    # 'test' split (it ignores cfg.sampler when split == 'test'). Its gen_test
-    # walks clouds 0..sampler.length and only fully covers the FIRST `length`
-    # frames in split order -- an order-biased subset, and a different protocol
-    # from the random patches used for train/val. (That is why a --steps 50 test
-    # smoke evaluated only the first ~50 frames, and --steps 2160 ran off the end
-    # of min_possibilities -> IndexError.) The validation diagnostics this
-    # analysis compares against use SemSegRandomSampler with steps_per_epoch_valid
-    # patches, so force the SAME random sampler on every split. With
-    # steps_per_epoch=--steps the dataloader sets sampler.length to --steps, and
-    # gen() then draws exactly --steps random patches spread across ALL frames
-    # (index % len(dataset) wraparound) -- identical to validation and dense
-    # enough (--steps x 32768 points) to cover the split many times over.
-    if not isinstance(split.sampler, SemSegRandomSampler):
-        split.sampler = SemSegRandomSampler(split)
+    # Sampling protocol (TEST_PLAN.md §1, §3). Open3D's BaseDatasetSplit
+    # HARD-CODES SemSegSpatiallyRegularSampler for the 'test' split (ignoring
+    # cfg.sampler), so we force the sampler explicitly for BOTH splits:
+    #   * "sampled": SemSegRandomSampler -> exactly --steps random patches spread
+    #     across ALL frames (index % len(dataset) wraparound). Identical to the
+    #     validation diagnostics; used for the G2/H0 sampled-vs-full cross-check.
+    #   * "full": SemSegSpatiallyRegularSampler with length = #frames and NO step
+    #     cap. gen_test walks every frame in order, fully covering each (~8
+    #     patches/frame) before advancing, so EVERY frame's points are evaluated
+    #     >= once. This is the headline final-evaluation protocol.
+    # (The earlier bug: capping the spatially-regular sampler at --steps made it
+    # cover only the FIRST --steps frames in order -> biased subset / IndexError.)
+    if args.coverage == "full":
+        if not isinstance(split.sampler, SemSegSpatiallyRegularSampler):
+            split.sampler = SemSegSpatiallyRegularSampler(split)
+        steps_per_epoch = None  # -> dataloader length = len(split); covers all frames
+    else:
+        if not isinstance(split.sampler, SemSegRandomSampler):
+            split.sampler = SemSegRandomSampler(split)
+        steps_per_epoch = int(args.steps)
     sampler = split.sampler
     model.trans_point_sampler = sampler.get_point_sampler()
     torch_split = TorchDataloader(
@@ -551,7 +586,7 @@ def main() -> None:
         transform=model.transform,
         sampler=sampler,
         use_cache=False,
-        steps_per_epoch=args.steps,
+        steps_per_epoch=steps_per_epoch,
     )
     pipeline = SemanticSegmentation(model=model, dataset=dataset, **cfg["pipeline"])
     batcher = pipeline.get_batcher(device)
@@ -591,6 +626,49 @@ def main() -> None:
 
     mean = float(dataset.intensity_mean)
     std = float(dataset.intensity_std)
+
+    # --- full-coverage no-voting diagnostics (only when --coverage full) -------
+    # Per frame, accumulate each evaluation-cloud point's predicted-class votes
+    # across the overlapping patches that cover it (point_inds index the frame's
+    # subsampled cloud). From that we get, per true class: the coverage-count
+    # distribution, the prediction-agreement rate, and a majority-voted confusion
+    # matrix -- the empirical no-voting check. All of this is purely additive and
+    # must never affect the headline (patch-accumulated) metrics.
+    cov_enabled = args.coverage == "full"
+    cov_warned = {"missing": False}
+    cov_state: dict[str, Any] = {"key": None, "idx": [], "pred": [], "true": []}
+    cov_hist = {0: Counter(), 1: Counter(), 2: Counter()}
+    agree_total = {0: 0, 1: 0, 2: 0}
+    agree_yes = {0: 0, 1: 0, 2: 0}
+    voted_cm = np.zeros((3, 3), dtype=np.int64)
+
+    def finalize_frame() -> None:
+        if not cov_state["idx"]:
+            return
+        idx = np.concatenate(cov_state["idx"])
+        pred = np.concatenate(cov_state["pred"])
+        true = np.concatenate(cov_state["true"])
+        cov_state["idx"], cov_state["pred"], cov_state["true"] = [], [], []
+        if idx.size == 0:
+            return
+        n = int(idx.max()) + 1
+        vote = np.zeros((n, 3), dtype=np.int64)
+        np.add.at(vote, (idx, pred), 1)
+        true_cls = np.full(n, -1, dtype=np.int64)
+        true_cls[idx] = true  # constant per point; duplicate writes are identical
+        coverage = vote.sum(axis=1)
+        covered = coverage > 0
+        agree = covered & (vote.max(axis=1) == coverage)  # all patches agree on class
+        voted_pred = vote.argmax(axis=1)
+        for c in (0, 1, 2):
+            cmask = covered & (true_cls == c)
+            if cmask.any():
+                vals, cnts = np.unique(coverage[cmask], return_counts=True)
+                for v, ct in zip(vals.tolist(), cnts.tolist()):
+                    cov_hist[c][int(v)] += int(ct)
+                agree_total[c] += int(cmask.sum())
+                agree_yes[c] += int((agree & cmask).sum())
+        np.add.at(voted_cm, (true_cls[covered], voted_pred[covered]), 1)
 
     with torch.no_grad():
         for step, inputs in enumerate(tqdm(loader, desc="g0_sampled_validation"), start=1):
@@ -706,6 +784,28 @@ def main() -> None:
                 }
             )
 
+            if cov_enabled:
+                pinds = inputs["data"].get("point_inds")
+                if pinds is None:
+                    if not cov_warned["missing"]:
+                        print("[warn] point_inds absent; full-coverage diagnostics disabled")
+                        cov_warned["missing"] = True
+                    cov_enabled = False
+                else:
+                    if hasattr(pinds, "detach"):
+                        pinds = pinds.detach().cpu().numpy()
+                    pinds = np.asarray(pinds).reshape(-1)[valid_mask].astype(np.int64)
+                    frame_key = (seq_id, frame_idx)
+                    if frame_key != cov_state["key"]:
+                        finalize_frame()  # flush the frame we just finished
+                        cov_state["key"] = frame_key
+                    cov_state["idx"].append(pinds)
+                    cov_state["pred"].append(y_pred_np)
+                    cov_state["true"].append(y_true_np)
+
+    if cov_enabled:
+        finalize_frame()  # flush the final frame
+
     mismatch_rate = 0.0 if raw_remap_checked == 0 else raw_remap_mismatch / raw_remap_checked
     if mismatch_rate > args.max_raw_remap_mismatch_rate:
         raise RuntimeError(
@@ -777,6 +877,38 @@ def main() -> None:
     )
     np.save(out_dir / "confusion_matrix.npy", cm_all)
 
+    # Full-coverage no-voting diagnostics (only present for --coverage full).
+    if cov_enabled:
+        cov_rows = []
+        all_hist: Counter = Counter()
+        tot_total = tot_yes = 0
+        for c, name in enumerate(CLASS_NAMES):
+            pr = hist_percentiles(cov_hist[c])
+            all_hist.update(cov_hist[c])
+            tot_total += agree_total[c]
+            tot_yes += agree_yes[c]
+            cov_rows.append({
+                "true_class": name,
+                "covered_points": pr["count"],
+                "coverage_median": pr["median"],
+                "coverage_p10": pr["p10"],
+                "coverage_p90": pr["p90"],
+                "coverage_max": pr["max"],
+                "agreement_rate": (agree_yes[c] / agree_total[c]) if agree_total[c] else None,
+            })
+        pr_all = hist_percentiles(all_hist)
+        cov_rows.append({
+            "true_class": "all",
+            "covered_points": pr_all["count"],
+            "coverage_median": pr_all["median"],
+            "coverage_p10": pr_all["p10"],
+            "coverage_p90": pr_all["p90"],
+            "coverage_max": pr_all["max"],
+            "agreement_rate": (tot_yes / tot_total) if tot_total else None,
+        })
+        write_csv(out_dir / "coverage_count_by_class.csv", cov_rows)
+        np.save(out_dir / "confusion_matrix_voted.npy", voted_cm)
+
     summary = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "script": str(Path(__file__).resolve().relative_to(PROJECT_ROOT)),
@@ -804,6 +936,12 @@ def main() -> None:
     if has_rgb:
         summary["rgb_valid_metrics"] = metrics_from_cm(cm_by_rgb["rgb_valid"])
         summary["rgb_invalid_metrics"] = metrics_from_cm(cm_by_rgb["rgb_invalid"])
+    summary["coverage"] = args.coverage
+    if cov_enabled:
+        # Empirical no-voting check: per-point majority-voted metrics alongside the
+        # headline patch-accumulated ones (expected to agree closely).
+        summary["voted_metrics"] = metrics_from_cm(voted_cm)
+        summary["voted_confusion_matrix"] = voted_cm.tolist()
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2))
 
     readme = [
