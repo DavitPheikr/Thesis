@@ -123,11 +123,19 @@ warrants it.
   and test, so the comparison is fair regardless.
 - **Test split = 720 frames** = 9 sequences × 80
   (001, 002, 015, 065, 090, 101, 102, 103, 117); all contain markings.
+- **"Point"** throughout means a point of the model's **grid-subsampled
+  evaluation cloud** (the pipeline subsamples before patching). Metrics are
+  computed over that cloud; predictions are **not** projected back to the raw
+  PandaSet cloud. This is identical on val and test, so the comparison is
+  unaffected; "full coverage" therefore means every *evaluation-cloud* point is
+  covered ≥ once.
 
 ---
 
-## 3. The sampler bug (why earlier test numbers are discarded)
-Open3D-ML provides two samplers and **forces** the wrong one for test:
+## 3. The test-sampling bug (why earlier test numbers are discarded)
+Open3D-ML provides two samplers and **forces** a different one for the test split
+— the spatially-regular full-coverage sampler, which is appropriate in itself.
+The bug was on our side: our engine **capped** it with `--steps` (below).
 
 | split | sampler | behaviour |
 | --- | --- | --- |
@@ -209,7 +217,9 @@ ways: +RGB, +Lovász, +`dim_features` (8→16), +epochs (25→100). Therefore:
 
 ## 6. Evaluation methodology (every decision)
 1. **Full spatial coverage** for the final numbers (§1.2): spatially-regular
-   sampler, `length = 720`, uncapped — every test (and full-val) point evaluated.
+   sampler, `length = 720`, uncapped — every point of the (grid-subsampled)
+   evaluation cloud is covered ≥ once, for test and full-val alike (see §2 on
+   what "point" means here).
 2. **Averaging.** Headline = **micro / pooled** marking IoU (one confusion matrix
    over all points; matches val + segmentation convention). Supplement =
    **macro / per-sequence** marking IoU (rare-class consistency across the 9
@@ -221,9 +231,10 @@ ways: +RGB, +Lovász, +`dim_features` (8→16), +epochs (25→100). Therefore:
    D0/E0/F0 and for all full-val. The headline call is the close **G2-vs-H0**, so
    **3 full-coverage TEST seeds** for G2/H0 → mean ± std. This is *evaluation*
    variance only; the dominant uncertainty remains the **single training seed**.
-4. **Selection vs reporting** (§1.3): selected on sampled val; test evaluated
-   **once**, never tuned on; no model chosen by test score. G2 and H0 reported
-   **both** as a precision/recall trade-off.
+4. **Selection vs reporting** (§1.3): selected on sampled val; test is evaluated
+   **only after model selection is frozen**, and **no checkpoint/model choice is
+   made from test results** (the G2/H0 multi-seed runs are reporting, not
+   selection). G2 and H0 reported **both** as a precision/recall trade-off.
 5. **Sampled-vs-full cross-check** (G2/H0, test): run the *sampled* protocol
    (3 seeds, mean ± std) and show its band agrees with the full-coverage number —
    demonstrates the development metric was representative and bounds the
@@ -236,9 +247,13 @@ ways: +RGB, +Lovász, +`dim_features` (8→16), +epochs (25→100). Therefore:
      predicted class is identical across all covering patches, overall and **by
      true class**. High *marking* agreement ⇒ voting would barely change the
      marking result.
-   - **(optional, if the per-point mapping is clean)** a **voted confusion
-     matrix** (each unique point counted once, prediction = vote/logit consensus)
-     reported beside the patch-accumulated one as direct confirmation they agree.
+   - **supplementary, optional:** if a safe per-point mapping is already
+     available, a **voted confusion matrix** (each unique point counted once,
+     prediction = vote/logit consensus) may be reported beside the
+     patch-accumulated one as direct confirmation they agree. Otherwise the
+     coverage-count and agreement-rate diagnostics stand on their own and voting
+     remains future work. It is **never a second headline metric** and never a
+     blocker.
 7. **No bias/threshold sweep on test** — operating-point analysis stays on
    validation; the G2-vs-H0 contrast already gives two real operating points.
 
