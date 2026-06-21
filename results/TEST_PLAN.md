@@ -6,9 +6,11 @@ self-contained specification: the decision, the reasoning behind every choice,
 the code, the run sequence, the outputs, the presentation, and the caveats.
 Everything lives under `results/`; committed milestone code is not modified.
 
-**Status:** protocol **RESOLVED** (Option B+, §1). A sampler bug found during the
-smokes (§3) invalidated the earlier test numbers — they are discarded. Remaining
-work is implementation + verification + the run (§9), not further deliberation.
+**Status:** protocol **RESOLVED** (Option B+, run as **Option 2**, §1; external-
+review signed off). A sampler bug (§3) invalidated the earlier smoke numbers —
+discarded. The `--coverage full` path + diagnostics + driver are **implemented**
+(commit `423b81e`). Remaining: verify the full-coverage path on a G2 smoke (§9
+step 0), then launch the overnight run.
 
 ---
 
@@ -21,22 +23,34 @@ SELECTION (already done, frozen):
   Epochs and models were selected during development on the SAMPLED validation
   metric. We do NOT re-select on full-coverage validation or on test.
 
-FINAL REPORTING:
-  Re-evaluate the FROZEN selected checkpoints with FULL SPATIAL COVERAGE on BOTH
-  validation and the held-out test set. Headline = full-coverage TEST (micro/
-  pooled marking IoU). Supplement = macro per-sequence.
+FINAL REPORTING (Option 2 -- the run we are executing now):
+  Evaluate the FROZEN selected checkpoints with FULL SPATIAL COVERAGE on the
+  held-out TEST set. Headline = full-coverage test (micro/pooled marking IoU);
+  supplement = macro per-sequence.
+
+VALIDATION:
+  Keep the SAMPLED validation (from training eval_history) as the selection AND
+  comparison metric -- justified by the cross-check below. Full-coverage
+  VALIDATION is CONDITIONAL: run it only if the cross-check reveals a meaningful
+  sampled-vs-full gap, and then for G2/H0 only (`run_test_all.py --full-val`).
+  (External-review sign-off: this reduced plan is defensible provided the
+  cross-check gap is small and the existing column is labelled "sampled selection
+  validation".)
 
 ROBUSTNESS:
-  - sampled-vs-full cross-check on the close pair (G2, H0) on test;
+  - sampled-vs-full cross-check on the close pair (G2, H0) on test -- if these
+    agree, the existing sampled validation is comparable to the full-coverage
+    test, which is what licenses deferring full-coverage validation;
   - coverage-count distribution (per true class);
   - prediction-agreement rate for multiply-covered points (per true class);
   - (if clean) a per-point voted confusion matrix as direct no-voting confirmation.
 
 SEEDS:
-  D0/E0/F0: 1 full-coverage seed (val + test).
-  G2/H0:    3 full-coverage TEST seeds (mean ± std on the close call); 1 full val.
+  D0/E0/F0: 1 full-coverage TEST seed.
+  G2/H0:    3 full-coverage TEST seeds (mean ± std) + 3 sampled TEST seeds (cross-check).
 
-NOT DOING:
+NOT DOING (now):
+  - full-coverage VALIDATION (deferred -> conditional; see VALIDATION above);
   - per-point logit voting as the headline metric (disclosed limitation);
   - any threshold/bias sweep or tuning on test.
 ```
@@ -66,13 +80,18 @@ tuning on the final metric (selection bias). The clean, standard workflow is:
 **select on the development metric, report on the rigorous final metric, never
 re-select.**
 
-### 1.4 Why validation is re-measured with full coverage
-To make the val→test comparison a *single identical protocol* so the gap is pure
-generalization, not protocol difference. This yields **two validation numbers**,
+### 1.4 Validation: sampled by default, full-coverage only if needed
+For Option 2 we compare full-coverage **test** against the existing **sampled**
+validation, and justify that comparison with the G2/H0 cross-check (if sampled ≈
+full on test, the sampled validation is a fair reference). We re-measure
+validation with full coverage **only if the cross-check shows a meaningful gap**,
+and then for G2/H0 only — to recover a *single identical protocol* so the gap is
+pure generalization. Either way there are (up to) **two validation numbers**,
 labelled explicitly and never mixed:
-- **Selection-val** (sampled) — used for development/selection.
-- **Full-val** (full coverage) — post-selection, only a protocol-matched
-  reference for test.
+- **Selection-val** (sampled) — used for development/selection AND, in Option 2,
+  as the comparison reference for test.
+- **Full-val** (full coverage) — conditional, post-selection, only a
+  protocol-matched reference for test if the cross-check requires it.
 
 If they differ, that is not a contradiction (different protocols, different
 roles). If full-coverage **test** is lower than sampled validation, that is *more
@@ -295,17 +314,22 @@ milestone suites are not modified.
 - **Sampler fix** (`0f2ef05`): force `SemSegRandomSampler` on the test split so the
   sampled protocol matches validation.
 
-### 8.2 To implement for Option B+
+### 8.2 Implemented for Option B+ / Option 2 (commit `423b81e`)
 - **`--coverage {sampled,full}` switch** in `_sampled_error_engine.py`:
-  - `sampled` (current): force `SemSegRandomSampler`, `length = --steps` (2160).
+  - `sampled`: force `SemSegRandomSampler`, `length = --steps` (2160).
   - `full`: force `SemSegSpatiallyRegularSampler`, `length = len(split)` (frame
-    count), do **not** cap with `steps_per_epoch`; works for any split (so
-    full-val uses it too). Verify it completes each frame before advancing.
-- **Diagnostics** accumulated during a `full` run (per frame, keyed by subsampled
-  point index): coverage count per point, per-class agreement, and (optional)
-  voted CM. Emit `coverage_count_by_class.csv`, `agreement_rate.csv`, and (if
-  done) `confusion_matrix_voted.npy` + a `voted_marking_iou` field in
-  `summary.json`.
+    count), `steps_per_epoch=None` (uncapped); works for any split (so full-val
+    uses it too).
+- **Diagnostics** accumulated during a `full` run (per frame, keyed by the
+  subsampled `point_inds`): per-class coverage-count distribution + agreement
+  rate -> `coverage_count_by_class.csv` (one file, includes the agreement_rate
+  column); a majority-voted confusion matrix -> `confusion_matrix_voted.npy` +
+  `voted_metrics` in `summary.json`. Purely additive and guarded — never affects
+  the headline metrics. `summary.json` also gains `coverage`.
+- **`run_test_all.py`**: builds the Option 2 job list (full-coverage test for all
+  5 with the §6.3 seeds + sampled-coverage test cross-check for G2/H0); `--full-val`
+  adds full-coverage validation (G2/H0, 1 seed) for the conditional matched gap.
+  Outputs to `results/per_model/<folder>/<split>/<coverage>/seed_<S>/`.
 - **Drivers:** `run_test_all.py` gains `--coverage` and a `--val` mode so it can
   produce full-test (all 5), full-val (all 5), and sampled-test (G2/H0) with the
   per-model seed counts of §6.3. `build_comparison.py` gains the two-validation-
@@ -318,16 +342,24 @@ milestone suites are not modified.
 ```bash
 cd ~/project
 
-# 0) VERIFY the new full-coverage path on G2 first (the one real remaining risk):
-#    must iterate ~5-6k patches, cover all 720 frames, emit diagnostics, not crash.
+# 0) VERIFY the full-coverage path on G2 first (the one real remaining risk):
+#    must cover all 720 frames (all 9 sequences in per_sequence_metrics.csv),
+#    emit the diagnostics, and not crash.
 python results/test_suite/_sampled_error_engine.py \
   --config logs/milestone_g/runs/G2_schedule_extend_100/config_snapshot.yml \
   --checkpoint logs/milestone_g/runs/G2_schedule_extend_100/checkpoints/ckpt_epoch_00068.pth \
   --split test --coverage full --seed 42 --device cuda --out-dir results/_smoke_g2_full
-#    check: ~720 frames touched, active_points ~ full set, coverage/agreement CSVs present.
+#    NB: full coverage first does a SILENT ~10-20 min pass over all 720 frames
+#    (the spatially-regular sampler builds its coverage map in
+#    initialize_with_dataloader) BEFORE any progress bar appears. Total ~80-90 min.
 
-# 1) full run (detached, overnight) — full-coverage test + val + sampled cross-check
-python results/test_suite/run_test_all.py --device cuda   # honours §6.3 seed plan
+# 1) the Option 2 run (detached, overnight): full-coverage TEST (all 5) +
+#    sampled-coverage TEST cross-check (G2/H0). No validation here.
+nohup python results/test_suite/run_test_all.py --device cuda > /tmp/test_all.log 2>&1 &
+
+# 1b) CONDITIONAL: only if the G2/H0 cross-check shows a meaningful gap ->
+#     full-coverage validation for the matched comparison.
+# python results/test_suite/run_test_all.py --device cuda --only G2,H0 --full-val
 
 # 2) assemble package (CPU; can run locally)
 python results/test_suite/build_comparison.py
@@ -336,19 +368,14 @@ python results/test_suite/build_comparison.py
 python results/test_suite/run_qualitative.py --device cuda
 ```
 
-**Compute (≈70 min/full run, ≈27 min/sampled run):**
+**Compute — Option 2 (≈80-90 min/full run incl. warm-up, ≈27 min/sampled run):**
 
 | set | runs | ≈ time |
 | --- | ---: | ---: |
-| full-coverage **test** — D0/E0/F0 ×1 + G2/H0 ×3 | 9 | ~10.5 h |
-| full-coverage **val** — 5 ×1 | 5 | ~5.8 h |
+| full-coverage **test** — D0/E0/F0 ×1 + G2/H0 ×3 | 9 | ~13 h |
 | sampled **test** cross-check — G2/H0 ×3 | 6 | ~2.7 h |
-| **total (recommended)** | **20** | **~19 h** |
-
-**Leaner fallback** (if compute is tight): 1 full-coverage seed everywhere
-(10 full runs ≈ 12 h) + sampled G2/H0 cross-check (6 runs ≈ 2.7 h) ≈ **15 h**;
-the close-pair stability then rests on the sampled cross-check band rather than
-3 full-coverage seeds.
+| **Option 2 total** | **15** | **~15-16 h** |
+| *conditional* full-coverage **val** (only if cross-check gap) — G2/H0 ×1 | +2 | +~3 h |
 
 ---
 
@@ -364,8 +391,7 @@ results/
       confusion_matrix_voted.npy # optional (no-voting confirmation)
       per_sequence_metrics.csv   # macro / per-scene
       distance_bucket_metrics.csv
-      coverage_count_by_class.csv   # full runs: median/p10/p90/max by true class
-      agreement_rate.csv            # full runs: agreement overall + by true class
+      coverage_count_by_class.csv   # full runs: coverage median/p10/p90/max + agreement_rate, by true class
       frame_error_summary.csv       # drives qualitative auto-pick
       raw_subtype_rgb_stratified_metrics.csv / group_feature_summary.csv
       rgb_valid_stratified_metrics.csv   # RGB models only (D0 omits)
