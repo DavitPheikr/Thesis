@@ -6,8 +6,166 @@ RGB). It is a complete, self-contained handoff: goals, decisions, code, run
 sequence, outputs, what was verified, and caveats. Everything described lives
 under `results/` and was built without modifying any committed milestone code.
 
-Status when written: code built + structurally verified; the D0 runtime smoke is
-in progress; no test outputs exist yet.
+Status: harness built + structurally verified; D0 + G2 runtime smokes ran. **A
+sampling-protocol problem was found during the smokes (see §0). No valid test
+numbers exist yet — the earlier smoke numbers were measured on a biased subset
+and must be discarded.** The open decision in §0 must be resolved before the
+full run.
+
+---
+
+## 0. OPEN METHODOLOGICAL DECISION — how to sample the test set (READ FIRST)
+
+> This section is a self-contained brief for an external reviewer. It explains
+> how metrics are computed in this project, the sampler bug we hit, why the
+> choice it forces is genuinely non-obvious, and the options. **The question we
+> need help deciding is in §0.7.**
+
+### 0.1 One-paragraph summary
+RandLA-Net cannot ingest a whole LiDAR frame at once; it consumes fixed-size
+**32,768-point patches**. So *every* metric in this project is computed by
+drawing patches, running the model, and accumulating a 3×3 confusion matrix
+(true × predicted over `road / marking / other`), then deriving IoU /
+precision / recall from it. **How you draw those patches on the test set is the
+open question.** Validation (the baseline we compare against) was measured with
+**random** patch sampling. The deep-learning library (Open3D-ML) silently forces
+a **different**, order-based sampler on the test split, and that difference (a)
+made our first test numbers meaningless and (b) is now a real methodological
+choice for the final thesis number.
+
+### 0.2 How a "metric" is produced here (important background)
+- The model input is a patch of 32,768 points centred on some point, gathered by
+  nearest-neighbour search. A single PandaSet forward-facing frame has more
+  points than that, so each frame needs **several patches** to be fully seen.
+- For evaluation we loop over patches, take `argmax` of the model scores per
+  point, and **add each patch's (true, pred) pairs into one running 3×3 confusion
+  matrix**. All headline metrics are derived from that matrix.
+- **Crucial nuance:** this engine does **per-patch accumulation, not per-point
+  voting.** If a point is covered by several overlapping patches, it contributes
+  several times. (Textbook RandLA-Net test inference averages logits per point
+  and emits one prediction per point. We do not — and neither did our validation.
+  Whatever we choose, val and test use the *same* per-patch accumulation, so the
+  comparison stays internally fair.)
+- **Test split = 720 frames** (9 sequences × 80 frames: 001, 002, 015, 065, 090,
+  101, 102, 103, 117). All 9 contain markings.
+
+### 0.3 The two samplers (verbatim Open3D-ML behaviour)
+**(a) `SemSegRandomSampler`** — used for **training and validation**:
+```python
+def gen():
+    ids = np.random.permutation(self.length)   # self.length = steps_per_epoch (= 2160)
+    for i in ids:
+        yield i                                 # frame index; dataloader does index % num_frames
+```
+→ draws `length` **random** patches spread across **all** frames (frames revisited
+via wraparound). This is how the validation marking-IoU numbers (G2 = 0.55, etc.)
+were produced.
+
+**(b) `SemSegSpatiallyRegularSampler`** — Open3D **forces** this for the test split:
+```python
+def gen_test():
+    curr_could_id = 0
+    while curr_could_id < self.length:                  # self.length controls how far it walks
+        if self.min_possibilities[curr_could_id] > 0.5: # this frame is "covered" -> next frame
+            curr_could_id += 1
+            continue
+        self.cloud_id = curr_could_id
+        yield self.cloud_id                             # keep patching THIS frame until covered
+```
+→ walks frames **strictly in order** (0, 1, 2, …), fully covering each before
+moving on. It is designed for **complete test-time coverage** (predict every
+point). It is forced by a hard-coded rule in the library — it **ignores our
+config**:
+```python
+if split in ['test']:
+    sampler_cls = get_module('sampler', 'SemSegSpatiallyRegularSampler')   # forced
+else:
+    sampler_cls = get_module('sampler', self.cfg['sampler']['name'])       # our choice (random)
+```
+
+### 0.4 The bug we hit, and why the smoke numbers are invalid
+Our engine caps a run at `--steps` patches. For the **random** sampler that
+simply sets the patch count. For the **spatially-regular** sampler, `--steps`
+caps `self.length` — i.e. **how many frames (in order) it ever reaches**:
+- Smoke with `--steps 50` → it covered only the **first ~50 frames in order**
+  (sequence 001 + the start of 002), taking ~409 patches. The reported
+  **G2 = 0.2456** and **D0 = 0.149** marking IoU were therefore measured on **2
+  sequences in alphabetical order, not the 9-sequence test set.** That is why
+  they looked alarmingly low. **These numbers are an artifact and are discarded.**
+- Re-running with `--steps 2160` made it walk toward frame 2160 while only 720
+  frames exist → it indexed `min_possibilities[720]` → **`IndexError`** (crash).
+
+So: we currently have **no valid test number**, and val↔test were never measured
+the same way.
+
+### 0.5 Why this is a genuine choice, not an obvious fix
+- **The validation baseline is itself random-sampled.** The numbers we compare
+  test against (val marking IoU per model) come from training-time validation,
+  which used `SemSegRandomSampler`. "Match how val was measured" ⇒ random.
+- **Dense random sampling ≈ full coverage in aggregate.** 2160 patches ×
+  32,768 pts ≈ **70.8M point-evaluations** spread over 720 frames (~98k per
+  frame) — every frame is heavily oversampled, so the aggregate IoU is expected
+  to be ~equal to full coverage. (In the smoke the spatially-regular sampler
+  needed ~8 patches to "cover" a frame, so a true full-coverage pass over 720
+  frames is ≈ **5–6k patches**.)
+- **Marking is a rare class.** Coverage uniformity matters more than usual: a
+  reviewer could argue random sampling under/over-represents sparse marking
+  points, whereas full coverage guarantees every marking point is evaluated.
+- **Neither method is per-point voting** (see §0.2), so "full coverage" here is
+  "every point covered ≥ once with overlap-weighting," not the textbook
+  single-vote-per-point. This narrows the practical gap between the two options.
+
+### 0.6 The options
+**Option A — Random-sampled test (currently implemented).**
+Force `SemSegRandomSampler` on the test split too; 2160 random patches, identical
+to validation. *Claim:* "test measured with the identical protocol used for
+validation." *Pros:* directly comparable to the existing val numbers; supports
+the 3-eval-seed variance band; simple; ~equal to full coverage numerically.
+*Cons:* it is a (dense) *sample* of the test set, not every point — a small
+"why sample your final test set?" vulnerability, sharpest for the rare class.
+*Cost:* ~27 min/run. *Code:* done (commit `0f2ef05`).
+
+**Option B — Full-coverage test + matched full-coverage val (recommended).**
+Use the spatially-regular sampler **correctly** (set its length to the frame
+count = 720 so it covers *all* frames, never capped at `--steps`), AND re-run
+**validation** the same way for the selected checkpoints, so both sides of the
+val↔test comparison are full coverage. *Claim:* "every point of val and test was
+evaluated, under one identical protocol." *Pros:* canonical test-set evaluation;
+removes the sampling objection; strongest for the rare class. *Cons:* the val
+numbers in existing figures/docs are the sampled training-time ones, so we'd
+carry **two val numbers** (sampled = selection metric; full-coverage = comparison
+metric) and must explain both; more compute. *Cost:* ~40–60 min/run × (5 models ×
+val+test) ≈ overnight. *Code:* add a `--coverage {sampled,full}` switch.
+
+**Option C — Both (A as primary, one full-coverage G2 cross-check).**
+Report random-sampled as primary (matches val) but run full coverage on G2 once
+to show the two agree within the seed band — a robustness sentence
+("sampled and full-coverage agree to within 0.0X"). *Cost:* A + ~40 min.
+
+**Independent sub-decisions (orthogonal to A/B/C):**
+- *Selection integrity (settled):* epoch/model selection was done on **sampled
+  training-time validation** — standard, with **no test leakage**. Any
+  full-coverage val in Option B is a *post-hoc, comparison-only* re-measurement.
+- *Eval seeds:* random sampling is stochastic → 3 seeds give a variance band
+  (planned for G2/H0). Full coverage is near-deterministic → 1 seed suffices.
+
+### 0.7 The question we want help deciding
+> For a **bachelor thesis** reporting held-out test-set performance of a
+> rare-class (road-marking) segmentation model, where (i) all development/
+> validation metrics were produced by **dense random patch sampling**, (ii) the
+> evaluation accumulates a **per-patch confusion matrix (no per-point voting)**,
+> and (iii) dense random sampling numerically approximates full coverage — is it
+> **more correct and defensible** to report the test number with the **same
+> random-sampled protocol as validation (Option A)**, or to switch the final
+> test (and a matched re-run of validation) to **full spatial coverage
+> (Option B)**? What would a methods examiner most likely expect, and what is the
+> cleanest way to frame "we selected on sampled validation but report on
+> full-coverage test" without it looking inconsistent?
+
+Our current lean: **Option B** (full coverage is the more defensible *final*
+number, especially for a rare class), with the selection-integrity framing in
+§0.6. The counter-argument for **A** is internal consistency with every existing
+sampled-validation figure and the simplicity of one protocol everywhere.
 
 ---
 
@@ -78,7 +236,9 @@ This is why all five models are tested, not only D0/G2/H0.
    computed on random 32,768-point patches via `SemSegRandomSampler`, not
    exhaustive per-point inference. The test pass uses the **same** sampled
    protocol so val and test are measured identically. Disclose: "metrics are
-   sampled-patch, not exhaustive."
+   sampled-patch, not exhaustive." **(Partly superseded — see §0: Open3D forces a
+   different sampler on the test split; whether the final test number should be
+   random-sampled (Option A) or full-coverage (Option B) is the open decision.)**
 2. **Steps = 2160** patches per pass (matches the validation diagnostics).
 3. **Eval seeds:** D0/E0/F0 → 1 seed (42). **G2/H0 → 3 seeds (42, 1, 2)**,
    reported as mean ± std. This captures **evaluation-sampling** variance (which
