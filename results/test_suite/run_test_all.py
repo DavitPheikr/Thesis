@@ -121,6 +121,10 @@ def main() -> None:
         cfg = run_dir / "config_snapshot.yml"
         ckpt = run_dir / "checkpoints" / f"ckpt_epoch_{ep:05d}.pth"
         out_dir = out_root / folder / split / cov / f"seed_{s}"
+        if (out_dir / "summary.json").exists():
+            print(f"\n=== [{i}/{len(jobs)}] {code} {split}/{cov} seed {s} -> "
+                  f"already done ({out_dir.relative_to(REPO)}); skipping ===", flush=True)
+            continue
         print(f"\n=== [{i}/{len(jobs)}] {code} ep{ep} {split}/{cov} seed {s} "
               f"-> {out_dir.relative_to(REPO)} ===", flush=True)
         run([PY, ENGINE,
