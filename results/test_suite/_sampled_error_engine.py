@@ -65,6 +65,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 import open3d.ml.torch as ml3d  # noqa: E402
 from pandaset import geometry as pds_geometry  # noqa: E402
 from open3d._ml3d.datasets.utils import DataProcessing  # noqa: E402
+from open3d._ml3d.datasets.samplers.semseg_random import SemSegRandomSampler  # noqa: E402
 from open3d._ml3d.torch.dataloaders import TorchDataloader, get_sampler  # noqa: E402
 from open3d._ml3d.torch.modules.losses.semseg_loss import filter_valid_label  # noqa: E402
 from open3d._ml3d.torch.pipelines import SemanticSegmentation  # noqa: E402
@@ -527,15 +528,22 @@ def main() -> None:
     model, checkpoint_data = load_model(cfg, checkpoint, device)
 
     split = dataset.get_split(args.split)
+    # Open3D's BaseDatasetSplit HARD-CODES SemSegSpatiallyRegularSampler for the
+    # 'test' split (it ignores cfg.sampler when split == 'test'). Its gen_test
+    # walks clouds 0..sampler.length and only fully covers the FIRST `length`
+    # frames in split order -- an order-biased subset, and a different protocol
+    # from the random patches used for train/val. (That is why a --steps 50 test
+    # smoke evaluated only the first ~50 frames, and --steps 2160 ran off the end
+    # of min_possibilities -> IndexError.) The validation diagnostics this
+    # analysis compares against use SemSegRandomSampler with steps_per_epoch_valid
+    # patches, so force the SAME random sampler on every split. With
+    # steps_per_epoch=--steps the dataloader sets sampler.length to --steps, and
+    # gen() then draws exactly --steps random patches spread across ALL frames
+    # (index % len(dataset) wraparound) -- identical to validation and dense
+    # enough (--steps x 32768 points) to cover the split many times over.
+    if not isinstance(split.sampler, SemSegRandomSampler):
+        split.sampler = SemSegRandomSampler(split)
     sampler = split.sampler
-    # Force the number of sampled patches to exactly --steps for ANY split. The
-    # dataset only honours steps_per_epoch_train/valid, so the TEST split would
-    # otherwise fall back to len(split) (one patch per frame) and be sampled far
-    # more sparsely than the 2160-patch validation diagnostics — making val and
-    # test not comparable. Setting sampler.length here makes the random sampler
-    # draw exactly --steps patches (frames are revisited via the dataloader's
-    # index wraparound), so validation and test use an identical protocol.
-    sampler.length = int(args.steps)
     model.trans_point_sampler = sampler.get_point_sampler()
     torch_split = TorchDataloader(
         dataset=split,
