@@ -48,8 +48,20 @@ OUT = REPO / "results" / "comparisons" / "d0_vs_g2"
 
 D0_FOLDER = "D0_lidar"
 G2_FOLDER = "G2_lidar_rgb_lovasz"
-D0_NAME = "D0  (LiDAR)"
-G2_NAME = "G2  (LiDAR + RGB + Lovász)"
+
+
+def _disp(code: str, fallback: str) -> str:
+    """Thesis display name (matches the other plots); never the internal code."""
+    if HAVE_STYLE and hasattr(S, "display_name"):
+        try:
+            return S.display_name(code)
+        except Exception:
+            return fallback
+    return fallback
+
+
+D0_NAME = _disp("D0", "LiDAR")
+G2_NAME = _disp("G2", "LiDAR + RGB + Lovász")
 D0_COLOR = getattr(S, "NEUTRAL", "#7f8c9a") if HAVE_STYLE else "#7f8c9a"
 G2_COLOR = getattr(S, "CANDIDATE", "#2e7d32") if HAVE_STYLE else "#2e7d32"
 CLASSES = ["road", "marking", "other"]
@@ -116,7 +128,7 @@ def fig_metrics(d0, g2):
         ax.text(i + w / 2, g2[k] + 0.012, f"{g2[k]:.2f}", ha="center", fontsize=9)
     ax.set_xticks(x); ax.set_xticklabels([lab for _, lab in keys])
     ax.set_ylabel("score (test)"); ax.set_ylim(0, 1.0)
-    ax.set_title("Marking metrics: LiDAR (D0) vs LiDAR+RGB+Lovász (G2)")
+    ax.set_title("Marking metrics on the held-out test set")
     legend(ax, loc="upper right")
     style(ax)
     save(fig, "fig_metrics_bars.png")
@@ -194,7 +206,7 @@ def per_sequence(d0_dir, g2_dir):
             ax.text(i, 0.02, "night", ha="center", fontsize=8, color="#8a6d00")
     ax.set_xticks(x); ax.set_xticklabels(m["seq"], rotation=0)
     ax.set_ylabel("marking IoU (test)"); ax.set_xlabel("test sequence")
-    ax.set_title("Marking IoU per sequence: D0 vs G2  (065 = night)")
+    ax.set_title("Marking IoU per sequence  (065 = night)")
     ax.set_ylim(0, max(0.8, m[["marking_iou_D0", "marking_iou_G2"]].values.max() + 0.08))
     legend(ax, loc="upper left")
     style(ax)
@@ -215,7 +227,7 @@ def distance(d0_dir, g2_dir):
     ax.plot(xr, m["marking_iou_G2"], marker="o", label=G2_NAME, color=G2_COLOR)
     ax.set_xticks(list(xr)); ax.set_xticklabels(m["bucket"])
     ax.set_ylabel("marking IoU (test)"); ax.set_xlabel("distance bucket")
-    ax.set_title("Marking IoU by distance: D0 vs G2")
+    ax.set_title("Marking IoU by distance")
     legend(ax, loc="upper right")
     style(ax)
     save(fig, "fig_distance.png")
