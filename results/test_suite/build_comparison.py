@@ -82,20 +82,22 @@ def metrics_from_cm(cm: np.ndarray) -> dict:
     return out
 
 
-def seed_dirs(folder: str) -> list[Path]:
-    base = PER_MODEL / folder / "test"
+def seed_dirs(folder: str, split: str = "test", cov: str = "full") -> list[Path]:
+    base = PER_MODEL / folder / split / cov
     if not base.is_dir():
         return []
     return sorted(d for d in base.glob("seed_*") if (d / "confusion_matrix.npy").exists())
 
 
-def aggregate_test(folder: str) -> dict | None:
-    """Mean (+/- std) of every metric over the available eval seeds, from the npy."""
-    dirs = seed_dirs(folder)
+def aggregate(folder: str, split: str = "test", cov: str = "full") -> dict | None:
+    """Mean (+/- std) of every metric over the available seeds, from the npy.
+    Also carries the per-point voted marking IoU from summary.json when present."""
+    dirs = seed_dirs(folder, split, cov)
     if not dirs:
         return None
     per = [metrics_from_cm(np.load(d / "confusion_matrix.npy")) for d in dirs]
-    agg: dict = {"n_seeds": len(dirs), "seed_dirs": [str(d.relative_to(REPO)) for d in dirs]}
+    agg: dict = {"n_seeds": len(dirs), "coverage": cov,
+                 "seed_dirs": [str(d.relative_to(REPO)) for d in dirs]}
     keys = [k for k in per[0] if isinstance(per[0][k], float)]
     for k in keys:
         vals = np.array([m[k] for m in per], dtype=np.float64)
@@ -103,6 +105,10 @@ def aggregate_test(folder: str) -> dict | None:
         agg[k + "_std"] = float(vals.std(ddof=0))
     for k in ("road_to_marking", "marking_to_road"):
         agg[k] = int(np.mean([m[k] for m in per]))
+    voted = [load_json(d / "summary.json").get("voted_metrics", {}).get("marking_iou") for d in dirs]
+    voted = [x for x in voted if x is not None]
+    if voted:
+        agg["voted_marking_iou"] = float(np.mean(voted))
     return agg
 
 
@@ -137,9 +143,9 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text()) if path.exists() else {}
 
 
-def primary_dir(folder: str) -> Path | None:
-    """seed_42 if present, else the first available seed dir."""
-    dirs = seed_dirs(folder)
+def primary_dir(folder: str, split: str = "test", cov: str = "full") -> Path | None:
+    """seed_42 if present, else the first available seed dir (test/full by default)."""
+    dirs = seed_dirs(folder, split, cov)
     if not dirs:
         return None
     for d in dirs:
@@ -161,14 +167,23 @@ def build_master(data: dict) -> Path:
     for code, label, folder, rd, ep, has_rgb in MODELS:
         t = data[code]["test"]
         v = data[code]["val"]
+        fv = data[code]["full_val"]
+        sp = data[code]["sampled"]
         if t is None:
             continue
+        sel_val = v.get("marking_iou", float("nan"))
+        full_val_iou = fv["marking_iou"] if fv else float("nan")
+        gap_ref = full_val_iou if fv else sel_val   # matched gap when full-val exists
         rows.append({
             "code": code, "model": label, "selected_epoch": ep, "n_test_seeds": t["n_seeds"],
-            "val_marking_iou": round(v.get("marking_iou", float("nan")), 6),
-            "test_marking_iou": round(t["marking_iou"], 6),
-            "test_marking_iou_std": round(t["marking_iou_std"], 6),
-            "val_minus_test_iou": round(v.get("marking_iou", float("nan")) - t["marking_iou"], 6),
+            "selection_val_iou": round(sel_val, 6),
+            "full_val_iou": round(full_val_iou, 6),
+            "full_test_iou": round(t["marking_iou"], 6),
+            "full_test_iou_std": round(t["marking_iou_std"], 6),
+            "voted_test_iou": round(t.get("voted_marking_iou", float("nan")), 6),
+            "sampled_test_iou": round(sp["marking_iou"], 6) if sp else float("nan"),
+            "val_minus_test_iou": round(gap_ref - t["marking_iou"], 6),
+            "gap_ref": "full_val" if fv else "selection_val",
             "test_precision": round(t["marking_precision"], 6),
             "test_recall": round(t["marking_recall"], 6),
             "test_f1": round(t["marking_f1"], 6),
@@ -246,6 +261,28 @@ def write_shortcut(data: dict) -> None:
         df.to_csv(d / "brightness_fingerprint.csv", index=False)
 
 
+def write_crosscheck(data: dict) -> None:
+    """Sampled-vs-full agreement (the gate for whether full-coverage validation
+    is needed). Small, systematic gap = sampled is mildly optimistic vs full."""
+    rows = []
+    for code in ORDER:
+        full = data[code]["test"]
+        samp = data[code]["sampled"]
+        if not (full and samp):
+            continue
+        rows.append({
+            "code": code,
+            "full_iou": round(full["marking_iou"], 6),
+            "full_iou_std": round(full["marking_iou_std"], 6),
+            "sampled_iou": round(samp["marking_iou"], 6),
+            "sampled_iou_std": round(samp["marking_iou_std"], 6),
+            "gap_sampled_minus_full": round(samp["marking_iou"] - full["marking_iou"], 6),
+        })
+    if rows:
+        COMP.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame(rows).to_csv(COMP / "crosscheck_sampled_vs_full.csv", index=False)
+
+
 # ------------------------------- plots ------------------------------------- #
 
 def _present(data):
@@ -278,12 +315,19 @@ def plot_val_vs_test(data):
     import matplotlib.pyplot as plt
     pres = _present(data)
     labels = [S.display_name(c) for c, _l, _f in pres]
-    val = [data[c]["val"].get("marking_iou", np.nan) for c, _l, _f in pres]
+    # Prefer full-coverage validation where it exists (matched protocol); else the
+    # sampled selection validation. Label by whichever is shown.
+    def vref(c):
+        fv = data[c]["full_val"]
+        return fv["marking_iou"] if fv else data[c]["val"].get("marking_iou", np.nan)
+    any_full_val = any(data[c]["full_val"] for c, _l, _f in pres)
+    val = [vref(c) for c, _l, _f in pres]
     test = [data[c]["test"]["marking_iou"] for c, _l, _f in pres]
+    vlabel = "validation (full-coverage)" if any_full_val else "validation (sampled, selection)"
     x = np.arange(len(labels)); w = 0.38
     fig, ax = plt.subplots(figsize=(11, 5.6))
-    ax.bar(x - w / 2, val, w, label="validation (development)", color=S.NEUTRAL)
-    ax.bar(x + w / 2, test, w, label="test (held-out)", color=S.CANDIDATE)
+    ax.bar(x - w / 2, val, w, label=vlabel, color=S.NEUTRAL)
+    ax.bar(x + w / 2, test, w, label="test (full-coverage, held-out)", color=S.CANDIDATE)
     ax.set_xticks(x); ax.set_xticklabels(labels, rotation=12, ha="right")
     ax.set_ylabel("marking IoU")
     ax.set_title("Validation vs test marking IoU (generalization gap)")
@@ -385,35 +429,49 @@ def plot_distance(data):
 
 def write_readme(master: Path) -> None:
     df = pd.read_csv(master)
+    any_full_val = df["full_val_iou"].notna().any()
     lines = [
         "# Test-set results", "",
         "Final held-out **test** evaluation. Generated by `results/test_suite/build_comparison.py`",
-        "from the per-model passes in `results/per_model/<model>/test/seed_*/` (run by",
+        "from the per-model passes in `results/per_model/<model>/test/full/seed_*/` (run by",
         "`run_test_all.py`). Every number is re-derived from each seed's `confusion_matrix.npy`.",
         "",
-        "- **Sampled** evaluation (random patches, 2160 steps) — same protocol as the validation",
-        "  diagnostics; not exhaustive per-point.",
-        "- **Single training seed (42)**; G2/H0 test numbers are mean ± std over 3 *evaluation*",
-        "  seeds (sampling variance only, NOT training variance). ~0.008 marking-IoU noise floor:",
-        "  treat smaller differences as ties.",
-        "- Selection (epoch, model) was done on validation; test is reported once, not tuned on.",
+        "- **Full spatial coverage** (spatially-regular sampler, every frame covered) — the held-out",
+        "  test number. Near-deterministic across evaluation seeds.",
+        "- **Selection validation** (`selection_val_iou`) = the *sampled* training-time metric used to",
+        "  choose epoch/model. **Full-coverage validation** (`full_val_iou`) = optional, protocol-",
+        "  matched reference (only present if run); `val−test` uses it when available, else selection-val.",
+        "- **Cross-check** (`comparisons/crosscheck_sampled_vs_full.csv`): sampled vs full coverage on",
+        "  G2/H0 — sampled runs mildly optimistic; this licenses comparing test to the sampled selection-val.",
+        "- **Voted IoU** (`voted_test_iou`) = per-point majority-voted confusion matrix; ≈ the",
+        "  patch-accumulated headline (the no-voting check). Metrics are patch-accumulated, not logit voting.",
+        "- **Single training seed (42)**; G2/H0 test = mean ± std over 3 *evaluation* seeds (sampling",
+        "  variance only). ~0.008 marking-IoU noise floor: treat smaller differences as ties.",
+        "- Selection was done on validation; test is reported once, not tuned on.",
         "- Labels = `road_marking3` (marking = raw 8+9+10); `lane_*` == `marking_*`.",
         "", "## Master table", "",
-        "| model | sel.ep | val IoU | test IoU | val−test | test P | test R | test F1 | test mIoU | pred/true |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| model | sel.ep | sel-val IoU | "
+        + ("full-val IoU | " if any_full_val else "")
+        + "test IoU (full) | val−test | test P | test R | test F1 | test mIoU | pred/true | voted IoU |",
+        "| --- | ---: | ---: | " + ("---: | " if any_full_val else "")
+        + "---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for _, r in df.iterrows():
+        fv = f" {r['full_val_iou']:.4f} |" if any_full_val and pd.notna(r['full_val_iou']) else (" — |" if any_full_val else "")
         lines.append(
-            f"| {r['model']} | {int(r['selected_epoch'])} | {r['val_marking_iou']:.4f} | "
-            f"{r['test_marking_iou']:.4f} | {r['val_minus_test_iou']:+.4f} | {r['test_precision']:.4f} | "
-            f"{r['test_recall']:.4f} | {r['test_f1']:.4f} | {r['test_miou']:.4f} | {r['test_pred_true']:.3f} |")
+            f"| {r['model']} | {int(r['selected_epoch'])} | {r['selection_val_iou']:.4f} |"
+            + fv
+            + f" {r['full_test_iou']:.4f} ± {r['full_test_iou_std']:.4f} | {r['val_minus_test_iou']:+.4f} | "
+            f"{r['test_precision']:.4f} | {r['test_recall']:.4f} | {r['test_f1']:.4f} | "
+            f"{r['test_miou']:.4f} | {r['test_pred_true']:.3f} | {r['voted_test_iou']:.4f} |")
     lines += ["", "## Comparisons", "",
               "- `comparisons/rgb_effect__D0_vs_E0/` — clean 'add RGB' effect (LiDAR → +RGB).",
               "- `comparisons/system__D0_vs_G2_vs_H0/` — LiDAR baseline vs the full RGB systems.",
               "- `comparisons/shortcut__G2_vs_H0/` — brightness shortcut (rgb_valid over-prediction gap + FP fingerprint).",
+              "- `comparisons/crosscheck_sampled_vs_full.csv` — sampled-vs-full agreement (G2/H0).",
               "- `comparisons/plots/` — thesis-styled figures.",
-              "", "> Note: validation = per-epoch development metric (720-step); test = fresh 2160-step",
-              "> sampled pass. Both sampled; the val−test column is the generalization gap.", ""]
+              "", "> `val−test` is the generalization gap, using full-coverage validation where present",
+              "> (matched protocol), otherwise the sampled selection validation (see the cross-check).", ""]
     (REPO / "results" / "README.md").write_text("\n".join(lines))
 
 
@@ -425,10 +483,15 @@ def main() -> None:
     data: dict = {}
     missing = []
     for code, _label, folder, rd, ep, _has in MODELS:
-        t = aggregate_test(folder)
+        t = aggregate(folder, "test", "full")
         if t is None:
             missing.append(code)
-        data[code] = {"test": t, "val": val_metrics(rd, ep)}
+        data[code] = {
+            "test": t,                                        # headline: full-coverage test
+            "sampled": aggregate(folder, "test", "sampled"),  # cross-check
+            "full_val": aggregate(folder, "validation", "full"),  # conditional matched val
+            "val": val_metrics(rd, ep),                       # sampled selection-val (eval_history)
+        }
     present = [c for c in ORDER if data[c]["test"] is not None]
     if missing:
         print(f"[warn] no test outputs yet for: {missing} (skipping those rows)")
@@ -439,6 +502,7 @@ def main() -> None:
     master = build_master(data)
     write_comparison("rgb_effect__D0_vs_E0", [c for c in ("D0", "E0") if data[c]["test"]], data)
     write_comparison("system__D0_vs_G2_vs_H0", [c for c in ("D0", "G2", "H0") if data[c]["test"]], data)
+    write_crosscheck(data)
     if data["G2"]["test"] and data["H0"]["test"]:
         write_shortcut(data)
 
