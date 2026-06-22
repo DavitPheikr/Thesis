@@ -573,6 +573,15 @@ def main() -> None:
     if args.coverage == "full":
         if not isinstance(split.sampler, SemSegSpatiallyRegularSampler):
             split.sampler = SemSegSpatiallyRegularSampler(split)
+        # Open3D's spatially-regular sampler chooses its cloud generator by split
+        # NAME: the full-coverage in-order walk (gen_test) is used ONLY when the
+        # split is not in {train,training,validation,valid}. So on the 'validation'
+        # split it would silently fall back to gen_train (~1 patch/frame, NOT full
+        # coverage). Force the gen_test path on any split so full-coverage
+        # VALIDATION truly covers every frame, exactly like test. (sampler.split is
+        # only read for this generator choice; the dataset split/labels are
+        # unaffected -- attr['split'] still reports the real split.)
+        split.sampler.split = "test"
         steps_per_epoch = None  # -> dataloader length = len(split); covers all frames
     else:
         if not isinstance(split.sampler, SemSegRandomSampler):
