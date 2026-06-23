@@ -92,6 +92,10 @@ def auto_picks() -> dict[str, list[tuple[str, int]]]:
         picks["night_065"] = list(
             src.nlargest(K_PER_CATEGORY, "true_marking")[["seq_id", "frame_idx"]].itertuples(index=False, name=None)
         )
+    # Densest-marking frames anywhere in the test set (any sequence).
+    picks["most_marking"] = list(
+        df.nlargest(K_PER_CATEGORY, "true_marking")[["seq_id", "frame_idx"]].itertuples(index=False, name=None)
+    )
     if HAND_PICKS:
         picks["handpicked"] = [(str(s), int(f)) for s, f in HAND_PICKS]
     return picks
@@ -108,6 +112,9 @@ def render(category: str, seq: str, frame: int, device: str) -> None:
             continue
         for mode in MODES:
             out = REPO / "results" / "qualitative" / category / f"{seq}_f{frame:03d}" / folder / mode
+            if out.is_dir() and any(out.glob("*.png")):
+                print(f"[skip] already rendered: {out.relative_to(REPO)}")
+                continue
             run([PY, VIEWER,
                  "--config", cfg, "--run-dir", run_dir, "--checkpoint", ckpt,
                  "--split", "test", "--sequence", seq,
