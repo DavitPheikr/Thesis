@@ -51,17 +51,15 @@ MODELS = {
 }
 
 # ----------------------------- knobs --------------------------------------- #
-RENDER_MODELS = ["D0", "G2", "H0"]   # LiDAR baseline + the two candidates (same frames)
+RENDER_MODELS = ["D0", "G2"]         # LiDAR baseline vs best RGB model (same frames). Add "H0" for shortcut visuals.
 PICK_FROM = "G2"                      # reference model whose frame CSV drives the auto-picks
 MODES = ["gt", "pred", "error"]
 K_PER_CATEGORY = 3
 MIN_TRUE_MARKING = 2000              # ignore near-empty frames when picking best/worst
 PASSES_PER_FRAME = 8                 # near whole-frame coverage (1 = single sparse patch)
-# (sequence_id, frame_idx) you want regardless of the metrics. 065 = night.
-HAND_PICKS: list[tuple[str, int]] = [
-    ("065", 0),
-    ("065", 40),
-]
+# Extra (sequence_id, frame_idx) to force regardless of metrics. 065 night frames
+# are auto-picked below, so leave empty unless you want specific frames.
+HAND_PICKS: list[tuple[str, int]] = []
 # --------------------------------------------------------------------------- #
 
 
@@ -72,7 +70,7 @@ def run(cmd: list) -> None:
 
 def auto_picks() -> dict[str, list[tuple[str, int]]]:
     folder = MODELS[PICK_FROM][0]
-    csv = REPO / "results" / "per_model" / folder / "test" / "seed_42" / "frame_error_summary.csv"
+    csv = REPO / "results" / "per_model" / folder / "test" / "full" / "seed_42" / "frame_error_summary.csv"
     if not csv.exists():
         raise SystemExit(
             f"Reference frame CSV not found: {csv}\nRun run_test_all.py first (PICK_FROM={PICK_FROM})."
@@ -85,6 +83,15 @@ def auto_picks() -> dict[str, list[tuple[str, int]]]:
         "worst": list(enough.nsmallest(K_PER_CATEGORY, "marking_iou")[["seq_id", "frame_idx"]].itertuples(index=False, name=None)),
         "overpredict": list(df.nlargest(K_PER_CATEGORY, "road_to_marking")[["seq_id", "frame_idx"]].itertuples(index=False, name=None)),
     }
+    # Night sequence 065: auto-pick the frames with the most marking content
+    # (robust to "065"/"65" via int compare; the original seq_id string is kept).
+    night = df[df["seq_id"].astype(int) == 65]
+    if not night.empty:
+        src = night[night["true_marking"] >= MIN_TRUE_MARKING]
+        src = src if not src.empty else night
+        picks["night_065"] = list(
+            src.nlargest(K_PER_CATEGORY, "true_marking")[["seq_id", "frame_idx"]].itertuples(index=False, name=None)
+        )
     if HAND_PICKS:
         picks["handpicked"] = [(str(s), int(f)) for s, f in HAND_PICKS]
     return picks
