@@ -61,6 +61,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 import open3d.ml.torch as ml3d  # noqa: E402
 from open3d._ml3d.datasets.utils import DataProcessing  # noqa: E402
+from open3d._ml3d.datasets.samplers.semseg_random import SemSegRandomSampler  # noqa: E402
 from open3d._ml3d.torch.dataloaders import TorchDataloader  # noqa: E402
 from open3d._ml3d.torch.modules.losses.semseg_loss import filter_valid_label  # noqa: E402
 from open3d._ml3d.torch.pipelines import SemanticSegmentation  # noqa: E402
@@ -695,6 +696,13 @@ def main() -> None:
     if best_epoch is None and isinstance(checkpoint_data, dict):
         best_epoch = checkpoint_data.get("epoch")
 
+    # Open3D forces SemSegSpatiallyRegularSampler on the 'test' split; its point
+    # sampler reads self.cloud_id (set only by the cloud generator during full
+    # iteration, never in this per-frame viewer) -> AttributeError. Force the
+    # stateless random point sampler instead (same as the validation path; with
+    # --passes-per-frame it still covers the frame).
+    if not isinstance(split.sampler, SemSegRandomSampler):
+        split.sampler = SemSegRandomSampler(split)
     sampler = split.sampler
     model.trans_point_sampler = sampler.get_point_sampler()
     torch_split = TorchDataloader(
