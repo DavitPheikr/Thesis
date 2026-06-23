@@ -234,6 +234,35 @@ def distance(d0_dir, g2_dir):
     return m
 
 
+def fig_val_test(d0, g2):
+    """Matched generalization: full-coverage validation vs full-coverage test.
+    Skipped silently until full-coverage validation exists for the models."""
+    models = [(D0_FOLDER, D0_NAME, D0_COLOR, d0["marking_iou"]),
+              (G2_FOLDER, G2_NAME, G2_COLOR, g2["marking_iou"])]
+    vals, tests, names, cols = [], [], [], []
+    for folder, name, col, test_iou in models:
+        vp = PER_MODEL / folder / "validation" / "full" / "seed_42" / "confusion_matrix.npy"
+        vals.append(metrics_from_cm(np.load(vp))["marking_iou"] if vp.exists() else np.nan)
+        tests.append(test_iou); names.append(name); cols.append(col)
+    if all(np.isnan(v) for v in vals):
+        print("   (no full-coverage validation yet -> skipping val-vs-test figure)")
+        return
+    x = np.arange(len(models)); w = 0.38
+    fig, ax = plt.subplots(figsize=(7.6, 5.2))
+    ax.bar(x - w / 2, vals, w, label="validation (full-coverage)", color="#b8c0c8")
+    ax.bar(x + w / 2, tests, w, label="test (full-coverage, held-out)", color=cols)
+    for i, (v, t) in enumerate(zip(vals, tests)):
+        if not np.isnan(v):
+            ax.text(i, max(v, t) + 0.012, f"gap {v - t:+.3f}", ha="center", fontsize=9)
+    ax.set_xticks(x); ax.set_xticklabels(names)
+    ax.set_ylabel("marking IoU")
+    ax.set_ylim(0, max(tests + [v for v in vals if not np.isnan(v)]) + 0.09)
+    ax.set_title("Generalization: full-coverage validation vs test")
+    legend(ax, loc="upper right")
+    style(ax)
+    save(fig, "fig_val_vs_test.png")
+
+
 def write_table(d0, g2):
     rows = []
     for k in ["marking_iou", "marking_precision", "marking_recall", "marking_f1",
@@ -278,7 +307,8 @@ def write_readme(tbl, seqdf, distdf):
               "- `per_sequence_d0_vs_g2.csv` / `fig_per_sequence.png` — per scene (065 = night).",
               "- `distance_d0_vs_g2.csv` / `fig_distance.png` — by range.",
               "- `fig_metrics_bars.png`, `fig_overprediction.png`, `fig_error_breakdown.png`.",
-              "- `fig_confusion_D0.png`, `fig_confusion_G2.png` — row-normalized confusion.", ""]
+              "- `fig_confusion_D0.png`, `fig_confusion_G2.png` — row-normalized confusion.",
+              "- `fig_val_vs_test.png` — matched full-coverage validation vs test (generalization).", ""]
     (OUT / "README.md").write_text("\n".join(lines))
 
 
@@ -297,6 +327,7 @@ def main():
     fig_error_breakdown(d0, g2)
     seqdf = per_sequence(d0_dir, g2_dir)
     distdf = distance(d0_dir, g2_dir)
+    fig_val_test(d0, g2)
     write_readme(tbl, seqdf, distdf)
 
     print(f"[compare_d0_g2] wrote -> {OUT.relative_to(REPO)}")
