@@ -112,7 +112,7 @@ def render(category: str, seq: str, frame: int, device: str) -> None:
             continue
         for mode in MODES:
             out = REPO / "results" / "qualitative" / category / f"{seq}_f{frame:03d}" / folder / mode
-            if out.is_dir() and any(out.glob("*.png")):
+            if out.is_dir() and any(out.rglob("*.png")):
                 print(f"[skip] already rendered: {out.relative_to(REPO)}")
                 continue
             run([PY, VIEWER,
