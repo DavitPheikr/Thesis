@@ -1,6 +1,6 @@
 # Final Results & Test-Set Evaluation — Analysis Document
 
-**Last updated:** 2026-06-24 05:55 CEST.
+**Last updated:** 2026-06-24 06:05 CEST.
 **Status:** evaluation **COMPLETE**. Chosen final model = **G2** (`LiDAR + RGB + Lovász`).
 All numbers below are **full spatial coverage** unless a column/row is explicitly
 marked *sampled*.
@@ -43,6 +43,13 @@ here — only the saved matrices and CSVs.
 validation-vs-test recall reconciled across all four protocol/coverage
 combinations). Discrepancies found and fixed are listed in §7.
 
+**Note on H0 status (source consistency).** H0 was *trained* and finalized in
+Milestone H (100 epochs, 2026-06-21; `docs/milestone_h/MILESTONE_H_FINAL_CONTEXT.md`)
+and is *test-evaluated* here. Some earlier development notes predate the H0 run and
+call it "designed but not yet run" (e.g. `docs/milestone_g/...` §17, now corrected) —
+those mentions are **superseded**; this document and the Milestone-H context doc are
+the current status. Do not cite the older "not run" wording in the thesis.
+
 **Labels (constant throughout).** Label mode `road_marking3`: active classes
 `0=road, 1=marking, 2=other`; **marking = raw 8 (lane line) + 9 (stop line) + 10
 (other road marking)**; in every CSV/JSON, `lane_*` ≡ `marking_*`. Do **not**
@@ -65,8 +72,9 @@ compare to Milestone C (strict lane-line labels) without stating the label chang
 4. **Raw RGB *alone* (E0) hurts** (IoU −0.015 vs D0) by *worsening* over-prediction
    (`pred/true` 1.54→1.81) — the brightness shortcut. RGB becomes a net gain only
    after calibration (F0) and the Lovász IoU-surrogate loss (G2). The monotone
-   `pred/true` chain **1.54→1.81→1.32→1.00→0.93** (D0→E0→F0→G2→H0) *is* the
-   shortcut being progressively tamed.
+   `pred/true` chain **1.54→1.81→1.32→1.00→0.93** (D0→E0→F0→G2→H0) is the clearest
+   compact signature of **over-prediction being progressively controlled** (the
+   brightness-shortcut *reduction* specifically is evidenced separately, §3.6).
 5. **Jitter (H0) ≈ G2 on IoU** (0.510 vs 0.517 — 0.007 apart, below the ~0.008
    single-training-seed noise floor → a tie); it buys precision (0.70) at a recall
    cost and slightly *under*-predicts (`pred/true` 0.93). A calibration result, not
@@ -138,9 +146,9 @@ coverage** except the two columns flagged *sampled*.
 
 | code | sel-val* | full-val | **full-test** | ±std | voted | gap | prec | recall | F1 | mIoU | road IoU | other IoU | pred/true |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| D0 | 0.4403* | 0.4296 | **0.4147** | 0.000 | 0.4352 | 0.0149 | 0.4832 | 0.7452 | 0.5863 | 0.7732 | 0.9274 | 0.9774 | 1.542 |
-| E0 | 0.4384* | — | **0.3996** | 0.000 | 0.4295 | 0.0389† | 0.4432 | 0.8024 | 0.5710 | 0.7681 | 0.9239 | 0.9809 | 1.811 |
-| F0 | 0.4828* | — | **0.4495** | 0.000 | 0.4700 | 0.0332† | 0.5446 | 0.7202 | 0.6202 | 0.7903 | 0.9391 | 0.9823 | 1.322 |
+| D0 | 0.4403* | 0.4296 | **0.4147** | n/a | 0.4352 | 0.0149 | 0.4832 | 0.7452 | 0.5863 | 0.7732 | 0.9274 | 0.9774 | 1.542 |
+| E0 | 0.4384* | — | **0.3996** | n/a | 0.4295 | 0.0389† | 0.4432 | 0.8024 | 0.5710 | 0.7681 | 0.9239 | 0.9809 | 1.811 |
+| F0 | 0.4828* | — | **0.4495** | n/a | 0.4700 | 0.0332† | 0.5446 | 0.7202 | 0.6202 | 0.7903 | 0.9391 | 0.9823 | 1.322 |
 | **G2** | 0.5504* | 0.5368 | **0.5170** | 0.0005 | 0.5277 | 0.0198 | 0.6807 | 0.6825 | 0.6816 | 0.8171 | 0.9492 | 0.9851 | 1.003 |
 | H0 | 0.5507* | 0.5369 | **0.5096** | 0.0008 | 0.5186 | 0.0274 | 0.6992 | 0.6527 | 0.6751 | 0.8146 | 0.9495 | 0.9849 | 0.934 |
 
@@ -149,9 +157,11 @@ checkpoint (not a performance result; source = each run's `eval_history.csv`
 best-epoch row). `full-val`/`full-test` = the reported full-coverage metrics.
 `gap` = full-val − full-test where full-val exists; **†** for E0/F0 the gap is
 sel-val − full-test (no full-val run), so it is *not* protocol-matched — use it
-only as a coarse pointer, never as a generalization measure. `±std` = over the 3
-evaluation seeds (G2/H0 only). road/other IoU are 0.93–0.99 for every model —
-**marking is the only discriminating class.**
+only as a coarse pointer, never as a generalization measure. `±std` = standard
+deviation over the 3 evaluation seeds (G2/H0 only); **`n/a` for D0/E0/F0** which
+were run on a single seed (full coverage is near-deterministic, but no variance was
+*measured* for them — do not read `n/a` as zero variance). road/other IoU are
+0.92–0.99 for every model — **marking is the only discriminating class.**
 
 > **Seed note (so figures and table agree).** The 3-seed mean is the headline
 > (G2 full-test 0.5170). The focused `comparisons/d0_vs_g2/` and
@@ -199,8 +209,10 @@ Source: [`comparisons/rgb_effect__D0_vs_E0/deltas_vs_baseline.csv`](comparisons/
   "marking", the brightness shortcut. RGB is **not free**; it pays off only once
   over-prediction is controlled: soft class weights (F0, IoU 0.450, `pred/true`
   1.32) and the Lovász loss (G2, IoU 0.517, `pred/true` 1.00). **The `pred/true`
-  chain 1.54→1.81→1.32→1.00→0.93 (D0→E0→F0→G2→H0) is the single clearest signature
-  of the shortcut being tamed.**
+  chain 1.54→1.81→1.32→1.00→0.93 (D0→E0→F0→G2→H0) is the single clearest compact
+  signature of over-prediction being progressively controlled.** (It proves
+  calibration, not brightness-shortcut reduction by itself — that specific reduction
+  is shown by the rgb-valid over-prediction gap and the fingerprint in §3.6.)
 - **Critical caveat:** the −0.015 IoU drop exceeds the ~0.008 noise floor, but
   D0/E0 are **single training seeds** — read it as "RGB-alone does not help and
   plausibly hurts," not a tightly-bounded effect size.
@@ -305,16 +317,24 @@ Source: [`comparisons/shortcut__G2_vs_H0/`](comparisons/shortcut__G2_vs_H0/)
   dominated the *validation*-era fingerprint is largely controlled in the final
   model. **This contradicts the Milestone-G validation finding** (`docs/milestone_g/
   MILESTONE_G_FINAL_CONTEXT.md` §G2.6), where G2's road→marking FPs were *brighter*
-  than road (median 0.478 vs road 0.392). **The contradiction is real, not a
-  statistic mismatch — verified by recomputing the test medians** (from
-  `group_feature_summary.csv`): on test the FP brightness median is **~0.367**,
-  *below* road TP (**~0.465**) — so by *both* mean and median the test false markings
-  are darker than road, the opposite of validation. With the mean-vs-median
-  hypothesis ruled out, **exactly one explanation remains: validation and the
-  held-out test are different scenes, and on the unseen test set the RGB-brightness
-  shortcut has weakened** while LiDAR-intensity ambiguity dominates. **State
-  honestly:** on test, intensity-based ambiguity — not an
-  RGB-brightness shortcut — is the dominant residual error of the final model.
+  than road (median 0.478 vs road 0.392). **The contradiction is real, and two
+  possible artifacts were tested and ruled out:**
+  - *Mean-vs-median:* recomputing the **test** FP brightness median (**~0.367**,
+    *below* road TP **~0.465**) shows the test FPs are darker by *both* statistics —
+    not a mean/median mismatch.
+  - *Sampled-vs-full protocol:* recomputing the same fingerprint on **full-coverage
+    validation** (identical protocol to test) still gives **bright** FPs
+    (median **0.486** > road **0.385**), whereas full-coverage **test** gives
+    **dark** FPs (0.367 < 0.465). Same protocol, opposite result — so it is not a
+    protocol artifact either.
+- **Meaning (now isolated):** with both artifacts excluded, the difference is
+  located in the **validation-vs-test data itself** — on the held-out test
+  sequences the RGB-brightness signature of the residual FPs is gone and
+  LiDAR-intensity ambiguity dominates (FP intensity 31 vs road 25). **State
+  honestly:** on test, intensity-based ambiguity — not an RGB-brightness shortcut —
+  is the dominant residual error of the final model. A full *mechanistic* account of
+  *why* the two splits differ (e.g. lighting / road-material differences between the
+  validation and test sequences) is **not** established and is left as a note (§5).
 
 ### 3.7 Reliability / robustness
 - **Evaluation seeds:** full-coverage IoU std is tiny (G2 ±0.0005, H0 ±0.0008) —
@@ -543,7 +563,7 @@ file is in §4.5; re-run it to regenerate or extend.
 | Point | Resolution |
 | --- | --- |
 | **D0→G2 gain = +0.102 (table/§0) vs +0.103 (`d0_vs_g2`, §3.1)** | Different seed sets: the master table is the **3-seed mean** (G2 0.5170); `comparisons/d0_vs_g2/` and `system__D0_vs_G2_vs_H0/` are **seed 42** (G2 0.5177). Difference 0.0007 = eval-seed noise. Headline uses the 3-seed mean; figures carry the seed-42 value. Noted in §2. |
-| **§3.6: on test, road→marking FPs are *darker* than road (mean 0.389 < 0.404, median 0.367 < 0.465); on Milestone-G validation they were *brighter* than road (median 0.478 > 0.392).** | **The val→test shift is real — one explanation only: validation and the held-out test are different scenes**, and on the unseen test set the RGB-brightness shortcut has weakened, leaving the residual road↔marking confusion **LiDAR-intensity-driven** (FP intensity 31 vs road 25), not brightness-driven. *Hypothesis tested and ruled out:* that the gap was merely a statistic mismatch (validation quoted a brightness **median** 0.478, the original test fingerprint a **mean** 0.389) — recomputing the test **median** (0.367, also below road 0.465) shows the FPs are darker by *both* statistics, so this is **not** a mean-vs-median artifact. |
+| **§3.6: on test, road→marking FPs are *darker* than road (mean 0.389 < 0.404, median 0.367 < 0.465); on validation they were *brighter* (median 0.478 > 0.392).** | **The val→test shift is real and isolated to the data**, after ruling out *two* artifacts: (i) **mean-vs-median** — the test FPs are darker by *both* statistics (median 0.367 < road 0.465); (ii) **sampled-vs-full protocol** — recomputing the fingerprint on **full-coverage validation** (same protocol as test) still gives bright FPs (median 0.486 > road 0.385), opposite to full-coverage test. With both excluded, the difference lies in the validation-vs-test **data**: on test the residual confusion is **LiDAR-intensity-driven** (FP intensity 31 vs road 25), not brightness-driven. The *mechanism* (why the splits differ) is not established (§5). |
 | **"IoU is preserved on test" (a loose reading) vs IoU drops 0.020 val→test** | IoU **drops** by 0.020 (full-val 0.537 → full-test 0.517). It is *largely* preserved only relative to the much larger recall drop (−0.106), because precision rises (+0.053). Stated precisely in §3.4 — never claim recall and IoU both hold. |
 | **"voted ≈ accumulated" vs voted 0.527 > accumulated 0.518** | They differ by **+0.009** (seed 42), small and in the expected direction (over-covered boundary points slightly noisier under hard per-patch argmax). The voted CM **confirms** the headline rather than equalling it exactly; it is a check, not a second headline (§3.7, `TEST_PLAN.md` §1.5). |
 | **"RGB collapses at night" (a plausible prior) vs G2 065 0.531 > D0 0.455** | On the single night sequence the RGB model **beats** LiDAR-only and exceeds its own micro-average — no night collapse for the final model. But one sequence ⇒ case study only (§3.5, `TEST_PLAN.md` §13). |
