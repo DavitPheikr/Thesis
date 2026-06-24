@@ -1,0 +1,125 @@
+{
+  "generated_at": "2026-06-21T20:16:50",
+  "script": "results/test_suite/_sampled_error_engine.py",
+  "config": "/home/coder/project/logs/milestone_f/runs/F0_rgb_soft_weights/config_snapshot.yml",
+  "checkpoint": "/home/coder/project/logs/milestone_f/runs/F0_rgb_soft_weights/checkpoints/ckpt_epoch_00013.pth",
+  "checkpoint_epoch": 13,
+  "split": "test",
+  "steps": 2160,
+  "seed": 42,
+  "device": "cuda",
+  "rgb_valid_threshold": 0.5,
+  "note": "Fresh sampled inference pass; not exact original G0 best-epoch validation sample.",
+  "class_order": {
+    "0": "road",
+    "1": "marking",
+    "2": "other"
+  },
+  "raw_remap_alignment": {
+    "checked_points": 172588729,
+    "mismatched_points": 0,
+    "mismatch_rate": 0.0,
+    "threshold": 0.001
+  },
+  "feature_mode": "intensity_rgb_front",
+  "has_rgb": true,
+  "sampled_metrics": {
+    "active_points": 172588729,
+    "true_marking": 2577766,
+    "predicted_marking": 3408897,
+    "marking_tp": 1856612,
+    "marking_fp": 1552285,
+    "marking_fn": 721154,
+    "marking_iou": 0.449537305955786,
+    "marking_precision": 0.5446371656286476,
+    "marking_recall": 0.7202407045480467,
+    "marking_f1": 0.6202493776583048,
+    "predicted_true_marking_ratio": 1.3224229817601754,
+    "road_to_marking": 1358722,
+    "marking_to_road": 711423,
+    "other_to_marking": 193563
+  },
+  "confusion_matrix": [
+    [
+      58801656,
+      1358722,
+      744107
+    ],
+    [
+      711423,
+      1856612,
+      9731
+    ],
+    [
+      1000948,
+      193563,
+      107911967
+    ]
+  ],
+  "rgb_valid_metrics": {
+    "active_points": 150266832,
+    "true_marking": 2391612,
+    "predicted_marking": 3225115,
+    "marking_tp": 1758837,
+    "marking_fp": 1466278,
+    "marking_fn": 632775,
+    "marking_iou": 0.4559064670065761,
+    "marking_precision": 0.5453563671372958,
+    "marking_recall": 0.7354190395432035,
+    "marking_f1": 0.626285379367735,
+    "predicted_true_marking_ratio": 1.348510962480536,
+    "road_to_marking": 1290847,
+    "marking_to_road": 625262,
+    "other_to_marking": 175431
+  },
+  "rgb_invalid_metrics": {
+    "active_points": 22321897,
+    "true_marking": 186154,
+    "predicted_marking": 183782,
+    "marking_tp": 97775,
+    "marking_fp": 86007,
+    "marking_fn": 88379,
+    "marking_iou": 0.3592542649387679,
+    "marking_precision": 0.5320161930983448,
+    "marking_recall": 0.52523716922548,
+    "marking_f1": 0.528604947882877,
+    "predicted_true_marking_ratio": 0.9872578617703621,
+    "road_to_marking": 67875,
+    "marking_to_road": 86161,
+    "other_to_marking": 18132
+  },
+  "coverage": "full",
+  "voted_metrics": {
+    "active_points": 36532859,
+    "true_marking": 563362,
+    "predicted_marking": 701302,
+    "marking_tp": 404359,
+    "marking_fp": 296943,
+    "marking_fn": 159003,
+    "marking_iou": 0.47001819122288024,
+    "marking_precision": 0.5765832694046217,
+    "marking_recall": 0.7177605163287548,
+    "marking_f1": 0.6394726188141673,
+    "predicted_true_marking_ratio": 1.2448514454294042,
+    "road_to_marking": 247585,
+    "marking_to_road": 157270,
+    "other_to_marking": 49358
+  },
+  "voted_confusion_matrix": [
+    [
+      12720939,
+      247585,
+      124423
+    ],
+    [
+      157270,
+      404359,
+      1733
+    ],
+    [
+      197354,
+      49358,
+      22629838
+    ]
+  ]
+}

@@ -1,0 +1,4 @@
+code,model,marking_iou,marking_precision,marking_recall,marking_f1,miou,pred_true,road_iou,other_iou,road_to_marking
+D0,LiDAR,0.414686,0.483187,0.745228,0.586259,0.773163,1.542317,0.92738,0.977422,1751143
+G2,LiDAR + RGB + Lovász,0.517007,0.680721,0.68251,0.681614,0.817087,1.002627,0.949153,0.985103,783487
+H0,LiDAR + RGB + Lovász + Jitter,0.509589,0.699154,0.652713,0.675136,0.814644,0.933576,0.949456,0.984886,680172

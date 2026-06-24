@@ -1,0 +1,2 @@
+vs_baseline,model,d_marking_iou,d_marking_precision,d_marking_recall,d_marking_f1,d_miou,d_pred_true
+D0,LiDAR + RGB,-0.015105,-0.04001,0.05722,-0.015258,-0.005044,0.268357

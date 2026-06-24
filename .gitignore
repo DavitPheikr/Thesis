@@ -45,3 +45,6 @@ logs/milestone_c/feature_cache/
 /pandaset-devkit.worktrees/
 *.pcd
 logs/milestone_g/run_analysis/front_camera_predictions/
+
+results/videos/
+results/qualitative/
