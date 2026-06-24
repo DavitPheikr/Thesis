@@ -1,0 +1,93 @@
+{
+  "generated_at": "2026-06-23T02:25:51",
+  "script": "results/test_suite/_sampled_error_engine.py",
+  "config": "/home/coder/project/logs/milestone_d/runs/D0_weighted_ce_25ep/config_snapshot.yml",
+  "checkpoint": "/home/coder/project/logs/milestone_d/runs/D0_weighted_ce_25ep/checkpoints/ckpt_epoch_00018.pth",
+  "checkpoint_epoch": 18,
+  "split": "validation",
+  "steps": 2160,
+  "seed": 42,
+  "device": "cuda",
+  "rgb_valid_threshold": 0.5,
+  "note": "Fresh sampled inference pass; not exact original G0 best-epoch validation sample.",
+  "class_order": {
+    "0": "road",
+    "1": "marking",
+    "2": "other"
+  },
+  "raw_remap_alignment": {
+    "checked_points": 177529770,
+    "mismatched_points": 0,
+    "mismatch_rate": 0.0,
+    "threshold": 0.001
+  },
+  "feature_mode": "intensity",
+  "has_rgb": false,
+  "sampled_metrics": {
+    "active_points": 177529770,
+    "true_marking": 2438013,
+    "predicted_marking": 3777023,
+    "marking_tp": 1867737,
+    "marking_fp": 1909286,
+    "marking_fn": 570276,
+    "marking_iou": 0.4296315942381695,
+    "marking_precision": 0.494499768733206,
+    "marking_recall": 0.7660898444758087,
+    "marking_f1": 0.6010381918946246,
+    "predicted_true_marking_ratio": 1.5492218458228073,
+    "road_to_marking": 1611161,
+    "marking_to_road": 557560,
+    "other_to_marking": 298125
+  },
+  "confusion_matrix": [
+    [
+      54486687,
+      1611161,
+      707781
+    ],
+    [
+      557560,
+      1867737,
+      12716
+    ],
+    [
+      2039450,
+      298125,
+      115948553
+    ]
+  ],
+  "coverage": "full",
+  "voted_metrics": {
+    "active_points": 39283837,
+    "true_marking": 587323,
+    "predicted_marking": 834729,
+    "marking_tp": 439747,
+    "marking_fp": 394982,
+    "marking_fn": 147576,
+    "marking_iou": 0.44766849400135394,
+    "marking_precision": 0.5268140917591219,
+    "marking_recall": 0.748731107073961,
+    "marking_f1": 0.6184682416676746,
+    "predicted_true_marking_ratio": 1.4212435065543152,
+    "road_to_marking": 325842,
+    "marking_to_road": 145296,
+    "other_to_marking": 69140
+  },
+  "voted_confusion_matrix": [
+    [
+      12650861,
+      325842,
+      122497
+    ],
+    [
+      145296,
+      439747,
+      2280
+    ],
+    [
+      466855,
+      69140,
+      25061319
+    ]
+  ]
+}

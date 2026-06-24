@@ -1,0 +1,3 @@
+code,model,marking_iou,marking_precision,marking_recall,marking_f1,miou,pred_true,road_iou,other_iou,road_to_marking
+D0,LiDAR,0.414686,0.483187,0.745228,0.586259,0.773163,1.542317,0.92738,0.977422,1751143
+E0,LiDAR + RGB,0.399581,0.443177,0.802448,0.571001,0.768119,1.810674,0.923883,0.980894,2392864

@@ -1,0 +1,3 @@
+vs_baseline,model,d_marking_iou,d_marking_precision,d_marking_recall,d_marking_f1,d_miou,d_pred_true
+D0,LiDAR + RGB + Lovász,0.102321,0.197534,-0.062718,0.095355,0.043924,-0.53969
+D0,LiDAR + RGB + Lovász + Jitter,0.094903,0.215967,-0.092515,0.088877,0.041481,-0.608741

@@ -1,0 +1,5 @@
+true_class,covered_points,coverage_median,coverage_p10,coverage_p90,coverage_max,agreement_rate
+road,13092947,4,2,7,11,0.9801166230948617
+marking,563362,4,2,7,10,0.8378289625498347
+other,22876550,5,2,7,11,0.9888391824816242
+all,36532859,5,2,7,11,0.9833844375552431

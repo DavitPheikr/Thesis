@@ -1,0 +1,92 @@
+{
+  "generated_at": "2026-06-22T05:57:33",
+  "script": "results/test_suite/_sampled_error_engine.py",
+  "config": "/home/coder/project/logs/milestone_h/runs/H0_rgb_jitter/config_snapshot.yml",
+  "checkpoint": "/home/coder/project/logs/milestone_h/runs/H0_rgb_jitter/checkpoints/ckpt_epoch_00037.pth",
+  "checkpoint_epoch": 37,
+  "split": "test",
+  "steps": 2160,
+  "seed": 42,
+  "device": "cuda",
+  "rgb_valid_threshold": 0.5,
+  "note": "Fresh sampled inference pass; not exact original G0 best-epoch validation sample.",
+  "class_order": {
+    "0": "road",
+    "1": "marking",
+    "2": "other"
+  },
+  "raw_remap_alignment": {
+    "checked_points": 70673353,
+    "mismatched_points": 0,
+    "mismatch_rate": 0.0,
+    "threshold": 0.001
+  },
+  "feature_mode": "intensity_rgb_front",
+  "has_rgb": true,
+  "sampled_metrics": {
+    "active_points": 70673353,
+    "true_marking": 1243891,
+    "predicted_marking": 1146852,
+    "marking_tp": 823338,
+    "marking_fp": 323514,
+    "marking_fn": 420553,
+    "marking_iou": 0.5252873379885862,
+    "marking_precision": 0.7179112910820228,
+    "marking_recall": 0.6619052634033046,
+    "marking_f1": 0.6887716496503389,
+    "predicted_true_marking_ratio": 0.9219875374932369,
+    "road_to_marking": 312265,
+    "marking_to_road": 416381,
+    "other_to_marking": 11249
+  },
+  "confusion_matrix": [
+    [
+      29594448,
+      312265,
+      322046
+    ],
+    [
+      416381,
+      823338,
+      4172
+    ],
+    [
+      316599,
+      11249,
+      38872855
+    ]
+  ],
+  "rgb_valid_metrics": {
+    "active_points": 61229107,
+    "true_marking": 1140597,
+    "predicted_marking": 1061729,
+    "marking_tp": 767079,
+    "marking_fp": 294650,
+    "marking_fn": 373518,
+    "marking_iou": 0.5344578319968618,
+    "marking_precision": 0.722480972074795,
+    "marking_recall": 0.6725241255237389,
+    "marking_f1": 0.6966080407714389,
+    "predicted_true_marking_ratio": 0.9308537546565526,
+    "road_to_marking": 285688,
+    "marking_to_road": 370389,
+    "other_to_marking": 8962
+  },
+  "rgb_invalid_metrics": {
+    "active_points": 9444246,
+    "true_marking": 103294,
+    "predicted_marking": 85123,
+    "marking_tp": 56259,
+    "marking_fp": 28864,
+    "marking_fn": 47035,
+    "marking_iou": 0.4256950014376731,
+    "marking_precision": 0.6609142065011806,
+    "marking_recall": 0.5446492535868492,
+    "marking_f1": 0.5971754141080688,
+    "predicted_true_marking_ratio": 0.8240846515770519,
+    "road_to_marking": 26577,
+    "marking_to_road": 45992,
+    "other_to_marking": 2287
+  },
+  "coverage": "sampled"
+}

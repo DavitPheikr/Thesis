@@ -1,0 +1,6 @@
+code,model,selected_epoch,n_test_seeds,selection_val_iou,full_val_iou,full_test_iou,full_test_iou_std,voted_test_iou,sampled_test_iou,val_minus_test_iou,gap_ref,test_precision,test_recall,test_f1,test_miou,test_road_iou,test_other_iou,test_pred_true,test_road_to_marking
+D0,LiDAR,18,1,0.440294,0.429632,0.414686,0.0,0.435177,,0.014945,full_val,0.483187,0.745228,0.586259,0.773163,0.92738,0.977422,1.5423,1751143
+E0,LiDAR + RGB,14,1,0.438439,,0.399581,0.0,0.429478,,0.038859,selection_val,0.443177,0.802448,0.571001,0.768119,0.923883,0.980894,1.8107,2392864
+F0,LiDAR + RGB (calibrated),13,1,0.48277,,0.449537,0.0,0.470018,,0.033232,selection_val,0.544637,0.720241,0.620249,0.790291,0.939071,0.982265,1.3224,1358722
+G2,LiDAR + RGB + Lovász,68,3,0.550444,0.536834,0.517007,0.000478,0.527655,0.529238,0.019827,full_val,0.680721,0.68251,0.681614,0.817087,0.949153,0.985103,1.0026,783487
+H0,LiDAR + RGB + Lovász + Jitter,37,3,0.550671,0.536945,0.509589,0.000845,0.518615,0.524851,0.027356,full_val,0.699154,0.652713,0.675136,0.814644,0.949456,0.984886,0.9336,680172
