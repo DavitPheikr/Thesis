@@ -38,6 +38,12 @@ logs/milestone_c/runs/
 logs/milestone_c/checkpoints/
 logs/milestone_c/feature_cache/
 
+# Milestone D generated runtime artifacts
+logs/milestone_d/runs/
+logs/milestone_d/cache/
+logs/milestone_d/checkpoints/
+logs/milestone_d/feature_cache/
+
 # Temporary files
 *.tmp
 
