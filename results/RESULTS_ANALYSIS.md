@@ -1,6 +1,6 @@
 # Final Results & Test-Set Evaluation — Analysis Document
 
-**Last updated:** 2026-06-24 05:34 CEST.
+**Last updated:** 2026-06-24 05:51 CEST.
 **Status:** evaluation **COMPLETE**. Chosen final model = **G2** (`LiDAR + RGB + Lovász`).
 All numbers below are **full spatial coverage** unless a column/row is explicitly
 marked *sampled*.
@@ -305,11 +305,15 @@ Source: [`comparisons/shortcut__G2_vs_H0/`](comparisons/shortcut__G2_vs_H0/)
   dominated the *validation*-era fingerprint is largely controlled in the final
   model. **This contradicts the Milestone-G validation finding** (`docs/milestone_g/
   MILESTONE_G_FINAL_CONTEXT.md` §G2.6), where G2's road→marking FPs were *brighter*
-  than road. Two reconciling factors (§7): (a) validation vs held-out test are
-  different scenes; (b) the validation finding emphasized brightness *medians*
-  (FP 0.478) while the test fingerprint records only *means* — so part of the shift
-  may be distributional. **State honestly:** on test, intensity-based ambiguity — not
-  an RGB-brightness shortcut — is the dominant residual error of the final model.
+  than road (median 0.478 vs road 0.392). **The contradiction is real, not a
+  statistic mismatch — verified by recomputing the test medians** (from
+  `group_feature_summary.csv`): on test the FP brightness median is **~0.367**,
+  *below* road TP (**~0.465**) — so by *both* mean and median the test false markings
+  are darker than road, the opposite of validation. The remaining explanation is the
+  genuine one: **validation and held-out test are different scenes, and on the
+  unseen test set the RGB-brightness shortcut has weakened** while LiDAR-intensity
+  ambiguity dominates. **State honestly:** on test, intensity-based ambiguity — not an
+  RGB-brightness shortcut — is the dominant residual error of the final model.
 
 ### 3.7 Reliability / robustness
 - **Evaluation seeds:** full-coverage IoU std is tiny (G2 ±0.0005, H0 ±0.0008) —
@@ -332,7 +336,35 @@ Source: [`comparisons/shortcut__G2_vs_H0/`](comparisons/shortcut__G2_vs_H0/)
   noise floor means G2≈H0 differences are ties. Evaluation seeds fix only sampling
   variance, **not** training variance.
 
-### 3.8 What this evaluation proves / does not prove
+### 3.8 Cross-model stratified comparison (same full-coverage data, all 5 models)
+Source: each model's `distance_bucket_metrics.csv`, `raw_subtype_rgb_stratified_metrics.csv`,
+`rgb_valid_stratified_metrics.csv`, `per_sequence_metrics.csv` (test/full/seed 42).
+§3.5 figured only G2; the per-model strata were already committed, so this is the
+model-to-model read of data we already had.
+
+- **Distance — the far-range weakness is universal, but RGB still helps there.**
+  Marking IoU at 60 m+: D0 0.178, E0 0.236, F0 0.191, **G2 0.346**, H0 0.337 — G2 is
+  ~2× D0 even at the hardest range, and leads every model at *every* bucket. So
+  long-range degradation is LiDAR sparsity, **not** an RGB ceiling.
+- **Subtype — the precision gain costs recall on *every* subtype, most on
+  stop-lines.** Per-subtype recall *regresses* from LiDAR-only to the full system:
+  stop-lines **D0 0.837 → G2 0.690 → H0 0.622**; lane-lines 0.756 → 0.728 → 0.702;
+  other road markings 0.712 → 0.591 → 0.561. This is the per-subtype face of the
+  val→test recall drop (§3.4): the calibration win is a *uniform* recall trade,
+  heaviest on the rare high-intensity stop-lines. **A real, citable limitation.**
+- **RGB-validity gap — present but partly confounded.** IoU (camera-visible minus
+  not): E0 0.037, F0 0.097, **G2 0.090**, H0 0.089 — the calibrated RGB models do
+  clearly better where the camera sees. *Caveat:* rgb_invalid regions are also
+  farther / edge-of-frame (geometrically harder), so this is an **upper bound** on
+  RGB benefit, not clean attribution (→ §5 #1, the D0-rgb_valid re-run).
+- **Night (065) — RGB helps; jitter does not.** IoU: D0 0.455 → E0 0.473 → F0 0.507
+  → **G2 0.531** → H0 0.514. RGB improves the night sequence monotonically (via
+  precision; recall falls 0.806→0.662), countering the "camera fails in low light"
+  prior. H0 (jitter, partly night-motivated) is *below* G2 at night — the
+  augmentation gave **no** night-specific test benefit. One sequence ⇒ case study
+  (§6.7).
+
+### 3.9 What this evaluation proves / does not prove
 
 **Proves (re-derivable from committed matrices):**
 - On the held-out test set, the full RGB+Lovász system (G2) is the best model
@@ -399,7 +431,7 @@ Produced by `run_test_all.py` → `_sampled_error_engine.py`.
 | `comparisons/d0_vs_g2/*.csv` | focused D0-vs-G2 metrics, per-sequence, distance (**seed 42**). | `compare_d0_g2.py` |
 | `comparisons/video_sequence_suitability_G2.csv` | per-sequence "is this a good video?" stats (marking-frame fraction, IoU spread, consistency). | `pick_video_sequences.py` |
 
-### 4.3 Figures
+### 4.3 Figures (all **22** result figures; every one listed below = every one on disk)
 | set | files | produced by | coverage |
 | --- | --- | --- | --- |
 | `results/G2_final/` | `fig_per_class_iou`, `fig_marking_metrics`, `fig_confusion` (counts), `fig_by_distance`, `fig_by_sequence`, `fig_by_subtype`, `fig_by_rgb_validity`, `fig_frame_iou_hist` | `model_results_figures.py` | **FULL** (G2 standalone) |
@@ -415,6 +447,18 @@ marking-metric family IoU=red / precision=orange / recall=purple / F1=gold
 | --- | --- | --- |
 | `results/qualitative/<category>/<seq>_f<frame>/<model>/<mode>/*.png` | front-camera GT / prediction / error overlays (opaque), D0 & G2, for auto-picked best / worst / overpredict / night-065 frames. | `run_qualitative.py` → `04_prediction_images.py` |
 | `results/videos/<seq>/<model>/images/*.png` + `<seq>_<model>_pred.mp4` | full-sequence prediction fly-through videos (G2; 101, 002, 065 rendered). | `make_sequence_video.py` → `04_prediction_images.py` |
+
+### 4.4b Methodology / Chapter-3 figures (OUT OF SCOPE here — listed for completeness)
+`results/chapter3/` exists but is **not** part of this test-evaluation record: these
+are dataset / task-illustration figures for the **methods chapter**, not results,
+and are **uncommitted** (local only). Listed so nothing is orphaned.
+
+| file | what it is |
+| --- | --- |
+| `figures/fig_task_camera.png`, `fig_task_camera_projection.png`, `fig_task_lidar_intensity.png`, `fig_task_lidar_labels.png` | the task illustration (front camera, camera→LiDAR projection, LiDAR intensity, LiDAR GT labels). |
+| `figures/fig_intensity_distance.png` | LiDAR intensity vs distance (the input-information motivation). |
+| `01_frame011_16_front_camera.png`, `03_frame011_16_gt_projection.png`, `frame11-16-original.png`, `frame-11-16-ground-truth.png` | a single worked example frame (camera / GT projection / raw / GT). |
+| scripts `make_chapter3_figures.py`, `frame_figures.py`, `make_intensity_distance_figure.py`, `view_frame.py` | generate the above. |
 
 ### 4.5 Code — `results/test_suite/`
 | script | role |
@@ -447,11 +491,12 @@ marking-metric family IoU=red / precision=orange / recall=purple / F1=gold
    mechanism flips (recall-limited at 40–60 m, precision-limited at 60 m+). Worth a
    per-subtype × distance cut. → `distance_bucket_metrics.csv` + per-patch data in
    `frame_error_summary.csv`.
-3. **The intensity-not-brightness residual confusion (§3.6).** On test, G2's
-   residual false markings are intensity-elevated road, not bright-RGB road —
-   *opposite* to the validation fingerprint. Probe per distance/sequence and
-   recompute the FP brightness **median** (not just mean) to fully reconcile with
-   Milestone G. → `group_feature_summary.csv` + a small median-fingerprint script.
+3. **The intensity-not-brightness residual confusion (§3.6) — RESOLVED.** On test,
+   G2's residual false markings are intensity-elevated road, not bright-RGB road —
+   *opposite* to the validation fingerprint. The mean-vs-median worry is now closed
+   (test FP brightness median ~0.367 < road ~0.465; confirmed by both statistics).
+   Remaining optional depth: the same probe *per distance/sequence*. →
+   `group_feature_summary.csv`.
 4. **Hardest scenes (001 vs 002) fail differently** — 001 over-predicts, 002
    under-detects. The qualitative overlays / 002 video show why. → `results/videos/
    002/…`, `qualitative/worst/…`.
@@ -497,7 +542,7 @@ file is in §4.5; re-run it to regenerate or extend.
 | Point | Resolution |
 | --- | --- |
 | **D0→G2 gain = +0.102 (table/§0) vs +0.103 (`d0_vs_g2`, §3.1)** | Different seed sets: the master table is the **3-seed mean** (G2 0.5170); `comparisons/d0_vs_g2/` and `system__D0_vs_G2_vs_H0/` are **seed 42** (G2 0.5177). Difference 0.0007 = eval-seed noise. Headline uses the 3-seed mean; figures carry the seed-42 value. Noted in §2. |
-| **§3.6 test: road→marking FPs are *darker* than road (0.389<0.404) vs Milestone G validation: FPs *brighter* than road** | Genuine val-vs-test shift. Reconciled by (a) different scenes (validation vs held-out test) and (b) metric basis — Milestone G emphasized brightness **median** (FP 0.478), the test fingerprint records only **means**. On the held-out test set the residual error is **intensity-driven**; the RGB-brightness shortcut is largely controlled in the final model. Flagged honestly in §3.6; median recompute is item 3 of §5. |
+| **§3.6 test: road→marking FPs are *darker* than road (0.389<0.404) vs Milestone G validation: FPs *brighter* than road** | Genuine val-vs-test shift. Reconciled by (a) different scenes (validation vs held-out test) and (b) metric basis — Milestone G emphasized brightness **median** (FP 0.478), the test fingerprint records only **means**. On the held-out test set the residual error is **intensity-driven**; the RGB-brightness shortcut is largely controlled in the final model. **Median check now done** (test FP brightness median ~0.367 < road ~0.465): the val→test shift is real, not a mean-vs-median artifact — so factor (b) is excluded and only (a), different scenes, remains. |
 | **"IoU is preserved on test" (a loose reading) vs IoU drops 0.020 val→test** | IoU **drops** by 0.020 (full-val 0.537 → full-test 0.517). It is *largely* preserved only relative to the much larger recall drop (−0.106), because precision rises (+0.053). Stated precisely in §3.4 — never claim recall and IoU both hold. |
 | **"voted ≈ accumulated" vs voted 0.527 > accumulated 0.518** | They differ by **+0.009** (seed 42), small and in the expected direction (over-covered boundary points slightly noisier under hard per-patch argmax). The voted CM **confirms** the headline rather than equalling it exactly; it is a check, not a second headline (§3.7, `TEST_PLAN.md` §1.5). |
 | **"RGB collapses at night" (a plausible prior) vs G2 065 0.531 > D0 0.455** | On the single night sequence the RGB model **beats** LiDAR-only and exceeds its own micro-average — no night collapse for the final model. But one sequence ⇒ case study only (§3.5, `TEST_PLAN.md` §13). |
