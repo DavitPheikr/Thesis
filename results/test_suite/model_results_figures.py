@@ -185,7 +185,7 @@ def main():
     allr = st[st["stratum"] == "all"]
     fig, ax = plt.subplots(figsize=(7.2, 5))
     labels = allr["raw_name"].str.replace("_marking", "").str.replace("_", " ")
-    ax.bar(range(len(allr)), allr["marking_recall"], color=MARK)
+    ax.bar(range(len(allr)), allr["marking_recall"], color=MET["recall"])  # recall = purple
     for i, v in enumerate(allr["marking_recall"]):
         ax.text(i, v + 0.012, f"{v:.3f}", ha="center")
     ax.set_xticks(range(len(allr))); ax.set_xticklabels(labels, rotation=10)
