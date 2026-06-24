@@ -281,7 +281,7 @@ All from `per_model/G2_lidar_rgb_lovasz/test/full/seed_42/`.
   actually sees the road — the cleanest available evidence that the RGB channel
   contributes (a partial answer to "is the D0→G2 gain really RGB?", since D0→G2 is
   not a clean ablation). 87 % of points are rgb_valid (150.3M / 172.6M).
-- **Night (065):** G2 IoU **0.531** vs D0 IoU **0.455** (+0.076) — the RGB model
+- **Night (065):** G2 IoU **0.531** vs D0 IoU **0.455** (+0.075) — the RGB model
   *beats* LiDAR-only on the one night sequence and sits **above** G2's own
   micro-average. So there is **no night-time collapse** for the final model here.
   Treat as a single case study, not a general low-light claim (`TEST_PLAN.md` §13).
