@@ -33,10 +33,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 # ----------------------------- palette ----------------------------------- #
-# Class identity (kept stable across the whole thesis).
-ROAD = "#4c78a8"      # blue
-MARKING = "#d95f02"   # orange
-OTHER = "#54a24b"     # green
+# Class identity (kept stable across the whole thesis). RULE: blue=road,
+# red=marking, green=other -- used for ANY figure that colours by class.
+ROAD = "#1f77b4"      # blue
+MARKING = "#d62728"   # red
+OTHER = "#2ca02c"     # green
 CLASS = {"road": ROAD, "marking": MARKING, "other": OTHER}
 
 # Run identity (distinct from class colours; never co-occur with class colours).
@@ -81,10 +82,10 @@ def display_name(label: str) -> str:
 # Marking-metric family. IoU ties to the marking colour; the other three are
 # mutually distinct and do NOT reuse the candidate/baseline hues.
 METRIC = {
-    "iou": MARKING,
-    "precision": ROAD,
-    "recall": OTHER,
-    "f1": "#e6ab02",   # gold (was teal — collided with CANDIDATE; now unique)
+    "iou": MARKING,       # red (IoU is the headline marking metric)
+    "precision": "#ff7f0e",  # orange  (decoupled from class blue/green)
+    "recall": "#9467bd",     # purple
+    "f1": "#e6ab02",         # gold
 }
 
 # Calibration: predicted/true marking ratio has ONE colour everywhere it is a
