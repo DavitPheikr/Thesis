@@ -311,6 +311,33 @@ def plot_progression(data):
     plt.close(fig)
 
 
+def plot_pred_true_progression(data):
+    """Over-prediction / calibration chain across all models: predicted/true marking
+    ratio per model with the calibrated=1.0 reference. Visualises the headline
+    1.54->1.81->1.32->1.00->0.93 (D0->E0->F0->G2->H0) over-prediction story."""
+    import matplotlib.pyplot as plt
+    pres = _present(data)
+    labels = [S.display_name(c) for c, _l, _f in pres]
+    vals = [data[c]["test"]["pred_true"] for c, _l, _f in pres]
+    errs = [data[c]["test"].get("pred_true_std", 0.0) for c, _l, _f in pres]
+    fig, ax = plt.subplots(figsize=(11, 5.6))
+    ax.bar(range(len(vals)), vals, yerr=errs, capsize=4,
+           color=[S.CANDIDATE if c in ("G2", "H0") else S.NEUTRAL for c, _l, _f in pres])
+    ax.axhline(1.0, color=S.CALIBRATED, ls=":", lw=1.4, label="calibrated (1.0)")
+    for i, v in enumerate(vals):
+        ax.text(i, v + 0.03, f"{v:.2f}", ha="center", fontsize=10)
+    ax.set_xticks(range(len(labels)))
+    ax.set_xticklabels(labels, rotation=12, ha="right")
+    ax.set_ylabel("predicted / true marking ratio (test)")
+    ax.set_title("Marking over-prediction across models (>1 = over-predicts)")
+    S.headroom(ax, 0.14)
+    S.legend_clear(ax, loc="upper right")
+    S.style_axes(ax)
+    fig.tight_layout()
+    fig.savefig(PLOTS / "pred_true_progression_test.png")
+    plt.close(fig)
+
+
 def plot_val_vs_test(data):
     import matplotlib.pyplot as plt
     pres = _present(data)
@@ -507,6 +534,7 @@ def main() -> None:
         write_shortcut(data)
 
     plot_progression(data)
+    plot_pred_true_progression(data)
     plot_val_vs_test(data)
     plot_pr_f1(data)
     plot_per_class(data)

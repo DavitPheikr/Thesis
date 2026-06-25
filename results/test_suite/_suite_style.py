@@ -66,7 +66,8 @@ def run_colors(candidate: str, baselines) -> dict:
 # keep the short codes for stability; only rendered figure text changes.
 DISPLAY_NAMES = {
     "D0": "LiDAR",
-    "F0": "LiDAR + RGB",
+    "E0": "LiDAR + RGB",
+    "F0": "LiDAR + RGB (calibrated)",
     "G0": "LiDAR + RGB + Lovász",
     "G1": "LiDAR + RGB + Lovász",
     "G2": "LiDAR + RGB + Lovász",

@@ -156,9 +156,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--point-radius", type=int, default=2)
     parser.add_argument(
         "--mode",
-        choices=("pred", "gt", "error"),
+        choices=("pred", "gt", "error", "plain"),
         default="pred",
-        help="Initial display mode. Keys p/g/e switch modes while running.",
+        help="Initial display mode. Keys p/g/e switch modes while running. "
+             "'plain' = raw front camera, no overlay and no HUD.",
     )
     parser.add_argument(
         "--save-dir",
@@ -655,6 +656,8 @@ def prepare_display_frame(
     alpha: float,
     radius: int,
 ) -> np.ndarray:
+    if mode == "plain":
+        return image_rgb  # raw front camera, no overlay
     if mode == "pred":
         return draw_points(image_rgb, uv, y_pred, alpha, radius)
     if mode == "gt":
@@ -866,21 +869,22 @@ def main() -> None:
             alpha=args.alpha,
             radius=args.point_radius,
         )
-        display = add_hud(
-            display,
-            mode=mode,
-            seq_id=item["seq_id"],
-            lidar_frame=item["frame_idx"],
-            cam_frame=item["cam_idx"],
-            dt=item["dt"],
-            checkpoint=checkpoint,
-            best_epoch=best_epoch,
-            n_projected=item["n_projected"],
-            n_points=item["n_valid_points"],
-            rgb_valid_ratio=item["rgb_valid_ratio"],
-            coverage=item.get("coverage"),
-            passes_seen=item.get("passes_seen"),
-        )
+        if mode != "plain":
+            display = add_hud(
+                display,
+                mode=mode,
+                seq_id=item["seq_id"],
+                lidar_frame=item["frame_idx"],
+                cam_frame=item["cam_idx"],
+                dt=item["dt"],
+                checkpoint=checkpoint,
+                best_epoch=best_epoch,
+                n_projected=item["n_projected"],
+                n_points=item["n_valid_points"],
+                rgb_valid_ratio=item["rgb_valid_ratio"],
+                coverage=item.get("coverage"),
+                passes_seen=item.get("passes_seen"),
+            )
 
         out_path = (
             args.save_dir
