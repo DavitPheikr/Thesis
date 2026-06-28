@@ -1,0 +1,17 @@
+row_type,class_name,count,mean,p05,p10,p25,median,p75,p90,p95,min,max,metric,value,count_value,pct_value,basis_count
+class_stat,road,60904485.0,25.25748634338379,3.0,8.0,21.0,28.0,32.0,35.0,37.0,0.0,114.0,,,,,
+class_stat,marking,2577766.0,32.84962463378906,4.0,10.0,24.0,31.0,41.0,56.0,66.0,0.0,114.0,,,,,
+class_stat,other,109106478.0,19.673564910888672,0.0,1.0,6.0,20.0,28.0,35.0,43.0,0.0,114.0,,,,,
+threshold,,,,,,,,,,,,,road_p10,8.0,,,
+threshold,,,,,,,,,,,,,road_p25,21.0,,,
+threshold,,,,,,,,,,,,,road_p75,32.0,,,
+threshold,,,,,,,,,,,,,road_p90,35.0,,,
+threshold,,,,,,,,,,,,,marking_p25,24.0,,,
+threshold,,,,,,,,,,,,,marking_median,31.0,,,
+threshold,,,,,,,,,,,,,marking_p75,41.0,,,
+overlap,marking,,,,,,,,,,,,marking_intensity_le_road_p75,,1410878.0,54.732586278195924,2577766.0
+overlap,marking,,,,,,,,,,,,marking_intensity_in_road_p25_p75,,857301.0,33.25751833176479,2577766.0
+overlap,marking,,,,,,,,,,,,marking_intensity_in_road_p10_p90,,1462412.0,56.73175920545154,2577766.0
+overlap,road,,,,,,,,,,,,road_intensity_ge_marking_p25,,42705611.0,70.11899205780986,60904485.0
+overlap,road,,,,,,,,,,,,road_intensity_ge_marking_median,,19036043.0,31.255568452799494,60904485.0
+overlap,road,,,,,,,,,,,,road_intensity_ge_marking_p75,,1055902.0,1.7337015492373016,60904485.0
